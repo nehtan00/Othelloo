@@ -282,7 +282,7 @@
 
     <div class="modal" id="winner-modal">
         <div class="modal-content">
-            <span class="close-button" onclick="closeWinnerModal()">&times;</span>
+            <span class="close-button" onclick="window.closeWinnerModal()">&times;</span>
             <p id="winner-message"></p>
             <h3>Final Scores:</h3>
             <p id="final-scores"></p>
@@ -291,35 +291,35 @@
 
     <div class="selection-container hidden" id="initial-setup">
         <h2>Choose Game Type</h2>
-        <button onclick="showMultiplayerLobby()">Multiplayer</button>
-        <button onclick="showDifficultySelection()">Single Player (vs Computer)</button>
+        <button onclick="window.showMultiplayerLobby()">Multiplayer</button>
+        <button onclick="window.showDifficultySelection()">Single Player (vs Computer)</button>
     </div>
 
     <div class="lobby-container hidden" id="multiplayer-lobby">
         <h2>Multiplayer Lobby</h2>
         <div class="lobby-controls">
             <input type="text" id="game-id-input" placeholder="Enter Game ID">
-            <button id="create-game-button" onclick="createGame()" disabled>Create Game</button>
-            <button id="join-game-button" onclick="joinGame()" disabled>Join Game</button>
+            <button id="create-game-button" onclick="window.createGame()" disabled>Create Game</button>
+            <button id="join-game-button" onclick="window.joinGame()" disabled>Join Game</button>
         </div>
         <div class="available-games-list">
             <h3>Available Games:</h3>
             <div id="available-games">Loading games...</div>
-            <button id="refresh-games-button" onclick="refreshAvailableGames()" disabled>Refresh List</button>
+            <button id="refresh-games-button" onclick="window.refreshAvailableGames()" disabled>Refresh List</button>
         </div>
         <div class="current-game-info hidden" id="current-game-info">
             <p>Game ID: <span id="display-game-id"></span></p>
             <p>Your Color: <span id="your-color"></span></p>
-            <button onclick="leaveGame()">Leave Game</button>
-            <button onclick="copyGameLink()">Copy Game Link</button>
+            <button onclick="window.leaveGame()">Leave Game</button>
+            <button onclick="window.copyGameLink()">Copy Game Link</button>
         </div>
     </div>
 
     <div class="difficulty-container hidden" id="difficulty-selection">
         <h3>Choose Difficulty</h3>
-        <button onclick="startGame('pvc', 'easy')">Easy</button>
-        <button onclick="startGame('pvc', 'medium')">Medium</button>
-        <button onclick="startGame('pvc', 'hard')">Hard</button>
+        <button onclick="window.startGame('pvc', 'easy')">Easy</button>
+        <button onclick="window.startGame('pvc', 'medium')">Medium</button>
+        <button onclick="window.startGame('pvc', 'hard')">Hard</button>
     </div>
 
     <div class="container hidden" id="game-container">
@@ -328,7 +328,7 @@
         <div class="info">
             <p id="turn">Black's Turn</p>
             <p id="score">Black: 2, White: 2</p>
-            <button onclick="resetGame()">Reset Game</button>
+            <button onclick="window.resetGame()">Reset Game</button>
         </div>
     </div>
 
@@ -358,6 +358,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         setLogLevel('Debug'); // Enable Firestore debug logging for console output
+
 
         // Get references to DOM elements
         const initialSetup = document.getElementById('initial-setup');
@@ -390,11 +391,11 @@
         let currentGameId = null; // The ID of the current multiplayer game
         let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
 
-        // Firebase Anonymous Authentication and UI state management
+        // --- Firebase Anonymous Authentication and UI state management ---
+        // This block must be within the module script to access `auth`
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 console.log("Firebase authenticated:", user.uid);
-                window.currentUserUid = user.uid; // Store UID globally for easy access
                 document.getElementById('auth-status').textContent = `Authenticated: ${user.uid.substring(0, 8)}...`;
                 // Enable multiplayer buttons once authenticated
                 if (createGameButton) createGameButton.disabled = false;
@@ -406,7 +407,7 @@
                 const gameIdFromUrl = urlParams.get('gameId');
                 if (gameIdFromUrl) {
                     gameIdInput.value = gameIdFromUrl; // Pre-fill input
-                    joinGameFromUrl(gameIdFromUrl); // Attempt to join
+                    window.joinGameFromUrl(gameIdFromUrl); // Call global function
                 } else {
                     // If no gameId in URL, show the initial game type selection
                     initialSetup.classList.remove('hidden');
@@ -427,9 +428,7 @@
         });
 
 
-        // --- Firebase Interaction Functions ---
-        // These functions interact directly with Firestore and are now part of the single module scope.
-
+        // --- Firebase Interaction Functions (remain internal to module) ---
         async function createFirebaseGame(gameId, player1Uid) {
             console.log("createFirebaseGame: Attempting to create document for gameId:", gameId, "by UID:", player1Uid);
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
@@ -448,12 +447,12 @@
                 lastMoveTimestamp: Date.now()
             };
             try {
-                await setDoc(gameRef, gameData); // Use setDoc for creation
+                await setDoc(gameRef, gameData);
                 console.log("createFirebaseGame: Document successfully written!");
                 return true;
             } catch (e) {
                 console.error("createFirebaseGame: Error writing document:", e);
-                throw e; // Re-throw the error to be caught by the caller
+                throw e;
             }
         }
 
@@ -464,12 +463,11 @@
 
             if (gameSnap.exists()) {
                 const gameData = gameSnap.data();
-                // Check if there's only one player and it's not the joining player
                 if (gameData.players.length === 1 && gameData.players[0].uid !== player2Uid) {
                     try {
                         await updateDoc(gameRef, {
-                            players: arrayUnion({uid: player2Uid, color: 'white'}), // Add Player 2 (White)
-                            status: 'playing' // Change game status to playing
+                            players: arrayUnion({uid: player2Uid, color: 'white'}),
+                            status: 'playing'
                         });
                         console.log("joinFirebaseGame: Game successfully joined in Firestore:", gameId);
                         return true;
@@ -479,7 +477,7 @@
                     }
                 } else if (gameData.players.some(p => p.uid === player2Uid)) {
                      console.log("joinFirebaseGame: Rejoining existing game:", gameId);
-                     return true; // Already in the game, just rejoining
+                     return true;
                 } else if (gameData.players.length === 2) {
                     alert("This game is already full.");
                     return false;
@@ -498,7 +496,7 @@
                     board: newBoard,
                     currentPlayer: nextPlayer,
                     status: newStatus,
-                    lastMoveTimestamp: Date.now() // Update timestamp on every move
+                    lastMoveTimestamp: Date.now()
                 });
                 console.log("updateFirebaseBoard: Game state successfully updated in Firestore.");
             } catch (e) {
@@ -510,16 +508,15 @@
         function listenToFirebaseGame(gameId, callback) {
             console.log("listenToFirebaseGame: Setting up listener for gameId:", gameId);
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-            // Set up a real-time listener for game changes
             return onSnapshot(gameRef, (docSnap) => {
                 if (docSnap.exists()) {
                     console.log("listenToFirebaseGame: Received update for gameId:", gameId, docSnap.data());
-                    callback(docSnap.data()); // Pass the updated game data to the callback
+                    callback(docSnap.data());
                 } else {
                     console.error("listenToFirebaseGame: Game document no longer exists for gameId:", gameId);
                     alert("The game you were in no longer exists. Returning to lobby.");
-                    closeWinnerModal(); // Force close if game disappears
-                    showMultiplayerLobby();
+                    window.closeWinnerModal(); // Call global function
+                    window.showMultiplayerLobby(); // Call global function
                 }
             }, (error) => {
                 console.error("listenToFirebaseGame: Error listening to game:", error);
@@ -530,7 +527,6 @@
         async function getAvailableGames() {
             console.log("getAvailableGames: Fetching available games...");
             const gamesCollectionRef = collection(db, `artifacts/${appId}/public/data/games`);
-            // Query for games that are in 'waiting' status and limit to 10 for display
             const q = query(gamesCollectionRef, where("status", "==", "waiting"), limit(10));
             try {
                 const querySnapshot = await getDocs(q);
@@ -546,96 +542,87 @@
             }
         }
 
-        // --- UI Control Functions (remains largely the same, adapted to single module scope) ---
-        function showDifficultySelection() {
+
+        // --- UI Control Functions (exposed to window) ---
+        window.showDifficultySelection = function() {
             initialSetup.classList.add('hidden');
             multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.remove('hidden');
-        }
+        };
 
-        function showMultiplayerLobby() {
+        window.showMultiplayerLobby = function() {
             initialSetup.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             multiplayerLobby.classList.remove('hidden');
-            refreshAvailableGames(); // Load available games when entering lobby
-        }
+            window.refreshAvailableGames(); // Call global function
+        };
 
-        function startGame(mode, difficulty = null) {
+        window.startGame = function(mode, difficulty = null) {
             gameMode = mode;
             computerDifficulty = difficulty;
             initialSetup.classList.add('hidden');
             multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            resetGame(); // Call resetGame to initialize and display the board
-        }
+            window.resetGame(); // Call global function
+        };
 
-        function closeWinnerModal() {
+        window.closeWinnerModal = function() {
             winnerModal.style.display = 'none';
-            // Return to initial setup or lobby after closing modal
             gameContainer.classList.add('hidden');
             if (gameMode === 'multiplayer') {
-                showMultiplayerLobby();
+                window.showMultiplayerLobby(); // Call global function
             } else {
                 initialSetup.classList.remove('hidden');
             }
-        }
+        };
 
-        // --- Multiplayer Lobby Functions (adapted to single module scope) ---
+        // --- Multiplayer Lobby Functions (exposed to window) ---
 
-        async function createGame() {
-            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
+        window.createGame = async function() {
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-                console.error("createGame: currentUserUid is null. Authentication might not be complete yet.");
+                console.error("createGame: auth.currentUser.uid is null. Authentication might not be complete yet.");
                 alert("Authentication is not complete. Please wait for 'Authenticated' status to appear and the buttons to enable.");
                 return;
             }
-            console.log("createGame: Attempting to create game. Current User UID:", currentUserId); // Debug log
+            console.log("createGame: Attempting to create game. Current User UID:", currentUserId);
 
             const gameId = generateGameId();
             displayGameId.textContent = gameId;
             yourColorElement.textContent = "Black (Player 1)";
-            playerColor = 'black'; // Set current user's color
-            currentGameId = gameId; // Store the created game ID
+            playerColor = 'black';
+            currentGameId = gameId;
 
             try {
-                await createFirebaseGame(gameId, currentUserId); // Use currentUserId
+                await createFirebaseGame(gameId, currentUserId);
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
-                // Listen for updates to this game (especially for a second player joining)
                 unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                    // Update local game state based on Firestore
                     loadGameFromFirebase(gameData);
 
                     if (gameData.status === 'playing' && gameData.players.length === 2) {
-                        // Game started, transition to game view if not already there
                         multiplayerLobby.classList.add('hidden');
                         gameContainer.classList.remove('hidden');
-                        // The loadGameFromFirebase already updates board, turn, score displays
                     } else if (gameData.status === 'finished') {
-                        endGame(); // Display winner modal
+                        endGame();
                     }
                 });
-
-                // Show game info and link to copy
                 currentGameInfo.classList.remove('hidden');
-
             } catch (error) {
                 console.error("Error creating game:", error);
                 alert(`Failed to create game: ${error.message}. Please check console for details and Firebase rules.`);
             }
-        }
+        };
 
-        async function joinGame() {
-            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
+        window.joinGame = async function() {
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-                console.error("joinGame: currentUserUid is null. Authentication might not be complete yet.");
+                console.error("joinGame: auth.currentUser.uid is null. Authentication might not be complete yet.");
                 alert("Authentication is not complete. Please wait for 'Authenticated' status to appear and try again.");
                 return;
             }
-            console.log("joinGame: Attempting to join game. Current User UID:", currentUserId); // Debug log
+            console.log("joinGame: Attempting to join game. Current User UID:", currentUserId);
 
             const gameId = gameIdInput.value.trim();
             if (!gameId) {
@@ -644,64 +631,56 @@
             }
 
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserId); // Use currentUserId
+                const joined = await joinFirebaseGame(gameId, currentUserId);
                 if (joined) {
                     displayGameId.textContent = gameId;
                     yourColorElement.textContent = "White (Player 2)";
-                    playerColor = 'white'; // Set current user's color
-                    currentGameId = gameId; // Store the joined game ID
+                    playerColor = 'white';
+                    currentGameId = gameId;
 
-                    // Listen for updates to this game
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData); // Update local game state based on Firestore
+                        loadGameFromFirebase(gameData);
                         if (gameData.status === 'finished') {
-                            endGame(); // Display winner modal
+                            endGame();
                         }
                     });
-
-                    // Hide lobby and show game container
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
-                    currentGameInfo.classList.remove('hidden'); // Show game info
+                    currentGameInfo.classList.remove('hidden');
                 }
             } catch (error) {
                 console.error("Error joining game:", error);
                 alert(`Failed to join game: ${error.message}. Make sure the ID is correct and the game is not full.`);
             }
-        }
+        };
 
-        // Joins game if gameId is present in URL on page load
-        async function joinGameFromUrl(gameId) {
-            const currentUserId = auth.currentUser?.uid; // Access directly from auth.currentUser
+        window.joinGameFromUrl = async function(gameId) {
+            const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-                // This function might be called before authentication completes.
-                // `onAuthStateChanged` will re-call this once `currentUserUid` is set.
-                return;
+                return; // Let onAuthStateChanged retry
             }
-            console.log(`joinGameFromUrl: Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`); // Debug log
+            console.log(`joinGameFromUrl: Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`);
 
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserId); // Use currentUserId
+                const joined = await joinFirebaseGame(gameId, currentUserId);
                 if (joined) {
-                    // If successfully joined, navigate to game view
                     initialSetup.classList.add('hidden');
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
 
                     displayGameId.textContent = gameId;
-                    yourColorElement.textContent = "White (Player 2)"; // Default to white for joiner via URL
+                    yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
                     currentGameId = gameId;
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData); // Update local game state from Firestore
+                        loadGameFromFirebase(gameData);
                         if (gameData.status === 'finished') {
                             endGame();
                         }
                     });
                     currentGameInfo.classList.remove('hidden');
                 } else {
-                    // If joining failed (e.g., game full or doesn't exist), return to initial setup
                     initialSetup.classList.remove('hidden');
                 }
             } catch (error) {
@@ -709,21 +688,20 @@
                 alert("Could not join game from link. It might be invalid or full. Please try creating/joining manually.");
                 initialSetup.classList.remove('hidden');
             }
-        }
+        };
 
 
-        function generateGameId() {
-            return Math.random().toString(36).substring(2, 9).toUpperCase(); // Simple 7-char ID
-        }
+        window.generateGameId = function() {
+            return Math.random().toString(36).substring(2, 9).toUpperCase();
+        };
 
-        async function refreshAvailableGames() {
-            // Access currentUserUid directly from auth.currentUser
+        window.refreshAvailableGames = async function() {
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
                 availableGamesDiv.innerHTML = 'Please wait for authentication to complete.';
                 return;
             }
-            availableGamesDiv.innerHTML = 'Loading games...'; // Show loading state
+            availableGamesDiv.innerHTML = 'Loading games...';
             try {
                 const games = await getAvailableGames();
                 availableGamesDiv.innerHTML = games.length > 0 ? '' : 'No games available.';
@@ -732,7 +710,7 @@
                     button.textContent = gameId;
                     button.onclick = () => {
                         gameIdInput.value = gameId;
-                        joinGame();
+                        window.joinGame(); // Call global function
                     };
                     availableGamesDiv.appendChild(button);
                 });
@@ -740,35 +718,34 @@
                 console.error("Error refreshing available games:", error);
                 availableGamesDiv.innerHTML = 'Failed to load games. Please refresh.';
             }
-        }
+        };
 
-        function leaveGame() {
+        window.leaveGame = function() {
             if (unsubscribeFromGame) {
-                unsubscribeFromGame(); // Stop listening to Firestore
+                unsubscribeFromGame();
             }
             currentGameId = null;
             playerColor = null;
             gameContainer.classList.add('hidden');
             currentGameInfo.classList.add('hidden');
-            gameIdInput.value = ''; // Clear the input field
-            showMultiplayerLobby(); // Go back to lobby
-        }
+            gameIdInput.value = '';
+            window.showMultiplayerLobby(); // Call global function
+        };
 
-        function copyGameLink() {
+        window.copyGameLink = function() {
             if (currentGameId) {
                 const gameLink = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`;
                 navigator.clipboard.writeText(gameLink)
                     .then(() => alert("Game link copied to clipboard! Share it with a friend."))
                     .catch(err => console.error("Could not copy text: ", err));
             }
-        }
+        };
 
         // This function updates the local game state (board, current player etc.)
         // based on the data received from Firebase.
         function loadGameFromFirebase(gameData) {
             board = gameData.board;
             currentPlayer = gameData.currentPlayer;
-            // Ensure playerColor is correctly set for the client from gameData.players
             if (gameData.players && gameData.players.length > 0 && auth.currentUser?.uid) {
                 const selfPlayer = gameData.players.find(p => p.uid === auth.currentUser.uid);
                 if (selfPlayer) {
@@ -776,7 +753,7 @@
                     yourColorElement.textContent = `${selfPlayer.color.charAt(0).toUpperCase() + selfPlayer.color.slice(1)} (Player ${selfPlayer.color === 'black' ? '1' : '2'})`;
                 }
             }
-            possibleMoves = getPossibleMoves(currentPlayer); // Calculate possible moves for the received current player
+            possibleMoves = getPossibleMoves(currentPlayer);
             updateBoardDisplay();
             updateTurnDisplay();
             updateScoreDisplay();
@@ -785,25 +762,23 @@
 
         // --- Board Management Functions ---
         function initializeBoard() {
-            // Reset the board to its initial state
             board = Array(8).fill(null).map(() => Array(8).fill(null));
             board[3][3] = 'white';
             board[4][4] = 'white';
             board[3][4] = 'black';
             board[4][3] = 'black';
-            currentPlayer = 'black'; // Black always starts
+            currentPlayer = 'black';
         }
 
         function createBoard() {
-            boardElement.innerHTML = ''; // Clear existing cells
+            boardElement.innerHTML = '';
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
                     const cell = document.createElement('div');
                     cell.classList.add('cell');
                     cell.dataset.row = i;
                     cell.dataset.col = j;
-                    cell.addEventListener('click', handleMove); // Add event listener to each cell
-
+                    cell.addEventListener('click', window.handleMove); // Call global function
                     const piece = board[i][j];
                     if (piece) {
                         const pieceElement = document.createElement('div');
@@ -820,7 +795,7 @@
             cells.forEach(cell => {
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-                cell.innerHTML = ''; // Clear current piece
+                cell.innerHTML = '';
 
                 const piece = board[row][col];
                 if (piece) {
@@ -828,15 +803,13 @@
                     pieceElement.classList.add('piece', piece);
                     cell.appendChild(pieceElement);
                 }
-                // Remove and re-add possible-move class for correct highlighting
                 cell.classList.remove('possible-move', 'white');
 
-                // Only highlight moves for the current local player's turn, or for all in PvP/PvC
                 if (gameMode !== 'multiplayer' || (gameMode === 'multiplayer' && currentPlayer === playerColor)) {
                      if (possibleMoves.some(move => move.row === row && move.col === col)) {
                         cell.classList.add('possible-move');
                         if (currentPlayer === 'white') {
-                            cell.classList.add('white'); // Apply white indicator for white's possible moves
+                            cell.classList.add('white');
                         }
                     }
                 }
@@ -871,15 +844,13 @@
         }
 
         function isValidMove(row, col, player, currentBoard) {
-            // Check if the cell is within bounds and empty
             if (row < 0 || row > 7 || col < 0 || col > 7 || currentBoard[row][col]) {
                 return false;
             }
-
             const opponent = getOpponent(player);
             const directions = [
-                [-1, 0], [1, 0], [0, -1], [0, 1], // Horizontal and Vertical
-                [-1, -1], [-1, 1], [1, -1], [1, 1]  // Diagonal
+                [-1, 0], [1, 0], [0, -1], [0, 1],
+                [-1, -1], [-1, 1], [1, -1], [1, 1]
             ];
 
             for (const [dr, dc] of directions) {
@@ -887,19 +858,16 @@
                 let c = col + dc;
                 let foundOpponent = false;
 
-                // Traverse in this direction as long as we find opponent's pieces
                 while (r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === opponent) {
                     foundOpponent = true;
                     r += dr;
                     c += dc;
                 }
 
-                // If we found opponent pieces and then landed on one of our own, it's a valid flip direction
                 if (foundOpponent && r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === player) {
-                    return true; // At least one direction allows a flip
+                    return true;
                 }
             }
-
             return false;
         }
 
@@ -922,7 +890,7 @@
                 [-1, -1], [-1, 1], [1, -1], [1, 1]
             ];
 
-            let piecesFlipped = 0; // Counter for AI heuristic
+            let piecesFlipped = 0;
 
             for (const [dr, dc] of directions) {
                 let r = row + dr;
@@ -947,9 +915,8 @@
             return piecesFlipped;
         }
 
-        // --- Main Game Flow Handler ---
-        async function handleMove(event) {
-            // In multiplayer, only allow moves if it's your turn and you are the current player
+        // --- Main Game Flow Handler (exposed to window) ---
+        window.handleMove = async function(event) {
             if (gameMode === 'multiplayer' && (currentPlayer !== playerColor || !currentGameId)) {
                 if (gameMode === 'multiplayer' && !currentGameId) {
                     console.warn("Game not joined. Button clicked before game setup complete.");
@@ -961,13 +928,12 @@
 
             const cell = event.target.closest('.cell');
             if (!cell || !cell.classList.contains('possible-move')) {
-                return; // Not a valid or highlighted move
+                return;
             }
 
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
 
-            // Create a temporary board to simulate the move and check post-move state
             const tempBoard = getDeepCopy(board);
             tempBoard[row][col] = currentPlayer;
             flipPieces(row, col, currentPlayer, tempBoard);
@@ -979,33 +945,27 @@
             let currentAlertMessage = null;
 
             if (possibleMovesForNextPlayer.length === 0) {
-                // The next player has no moves. Check if the current player has moves.
                 const possibleMovesForCurrentPlayerAgain = getPossibleMoves(currentPlayer, tempBoard);
                 if (possibleMovesForCurrentPlayerAgain.length > 0) {
-                    // Current player (who just moved) gets another turn because the opponent has no moves
                     currentAlertMessage = `${nextPlayerToMove.charAt(0).toUpperCase() + nextPlayerToMove.slice(1)} has no moves and skips their turn. It's ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn again!`;
-                    nextPlayerToMove = currentPlayer; // Stay on the same player
-                    possibleMovesForNextPlayer = possibleMovesForCurrentPlayerAgain; // Update possible moves
+                    nextPlayerToMove = currentPlayer;
+                    possibleMovesForNextPlayer = possibleMovesForCurrentPlayerAgain;
                 } else {
-                    // Neither player has moves, game over
                     gameEndStatus = 'finished';
                 }
             }
 
-            // Update the actual game board state
             board = tempBoard;
-            currentPlayer = nextPlayerToMove; // Set the new current player
-            possibleMoves = possibleMovesForNextPlayer; // Update possible moves for the new current player
+            currentPlayer = nextPlayerToMove;
+            possibleMoves = possibleMovesForNextPlayer;
 
-            // Handle turn progression and UI/Firebase updates
             if (gameEndStatus === 'finished') {
                 if (gameMode === 'multiplayer' && currentGameId) {
                      await updateFirebaseBoard(currentGameId, board, currentPlayer, 'finished');
-                } else { // Single player game just ended locally
-                     endGame(); // Display winner modal
+                } else {
+                     window.endGame(); // Call global function
                 }
             } else {
-                // Update UI immediately
                 updateBoardDisplay();
                 updateTurnDisplay();
                 updateScoreDisplay();
@@ -1014,18 +974,16 @@
                     alert(currentAlertMessage);
                 }
 
-                // If it's PVC mode and it's the computer's turn, initiate AI move
                 if (gameMode === 'pvc' && currentPlayer === 'white') {
                     setTimeout(computerMove, getComputerDelay());
                 } else if (gameMode === 'multiplayer' && currentGameId) {
-                    // For multiplayer, push the state to Firebase
                     await updateFirebaseBoard(currentGameId, board, currentPlayer, 'playing');
                 }
             }
-        }
+        };
 
-        // --- Game End and Reset Functions ---
-        function endGame() {
+        // --- Game End and Reset Functions (exposed to window) ---
+        window.endGame = function() {
             let blackCount = 0;
             let whiteCount = 0;
             for (let i = 0; i < 8; i++) {
@@ -1046,40 +1004,35 @@
 
             winnerMessage.textContent = winnerMessageText;
             finalScoresElement.textContent = `Black: ${blackCount}, White: ${whiteCount}`;
-            showWinnerModal();
-        }
+            window.showWinnerModal(); // Call global function
+        };
 
-        function showWinnerModal() {
-            winnerModal.style.display = 'flex'; // Use flex to center
-        }
+        window.showWinnerModal = function() {
+            winnerModal.style.display = 'flex';
+        };
 
-        function resetGame() {
+        window.resetGame = function() {
             if (gameMode === 'multiplayer') {
-                // In multiplayer, reset is managed by Firebase updates.
-                // A player should "leave" the game and create/join a new one.
                 alert("To reset a multiplayer game, please leave the current game from the lobby and create/join a new one.");
                 return;
             }
-            initializeBoard(); // Resets the internal board array and current player
-            createBoard(); // Recreates the HTML board elements
+            initializeBoard();
+            createBoard();
             updateTurnDisplay();
             updateScoreDisplay();
-            possibleMoves = getPossibleMoves(currentPlayer); // Calculate initial possible moves
-            updateBoardDisplay(); // Highlight initial moves
+            possibleMoves = getPossibleMoves(currentPlayer);
+            updateBoardDisplay();
             if (gameMode === 'pvc' && currentPlayer === 'white') {
                 setTimeout(computerMove, getComputerDelay());
             }
-        }
+        };
 
-        // --- Computer AI Logic ---
-
-        // Simple heuristic to get the score for a given board state
+        // --- Computer AI Logic (internal to module, called by handleMove) ---
         function getScoreForBoard(currentBoard, player) {
             let playerScore = 0;
             let opponentScore = 0;
             const opponent = getOpponent(player);
 
-            // Weights for board positions (corners are valuable, edges less so, squares next to corners negative)
             const WEIGHTS = [
                 [100, -20, 10, 5, 5, 10, -20, 100],
                 [-20, -50, -2, -2, -2, -2, -50, -20],
@@ -1103,30 +1056,26 @@
             return playerScore - opponentScore;
         }
 
-        // Helper to make a deep copy of the board
         function getDeepCopy(boardArray) {
             return boardArray.map(row => [...row]);
         }
 
         function getComputerDelay() {
             switch (computerDifficulty) {
-                case 'easy': return 1500; // Slower, more noticeable AI turn
+                case 'easy': return 1500;
                 case 'medium': return 1000;
-                case 'hard': return 700; // Faster, more challenging AI
+                case 'hard': return 700;
                 default: return 1000;
             }
         }
 
-        // AI Logic based on difficulty
         function computerMove() {
             if (gameMode !== 'pvc' || currentPlayer !== 'white') {
-                return; // Only computer plays if it's PVC mode and it's white's turn
+                return;
             }
 
             const moves = getPossibleMoves('white');
             if (moves.length === 0) {
-                // If no moves, this means a skip already occurred or the game is over.
-                // The handleMove logic already checks for skips and game end.
                 return;
             }
 
@@ -1134,52 +1083,43 @@
 
             switch (computerDifficulty) {
                 case 'easy':
-                    // Easy: Random move
                     chosenMove = moves[Math.floor(Math.random() * moves.length)];
                     break;
                 case 'medium':
-                    // Medium: Prioritize corners, then moves that flip the most pieces
                     chosenMove = findBestMoveMedium(moves, 'white');
                     break;
                 case 'hard':
-                    // Hard: Minimax with limited depth
-                    // Depth of 3 for example. Higher depth is more intelligent but slower.
                     chosenMove = findBestMoveMinimax(board, 'white', 3).move;
                     break;
                 default:
-                    chosenMove = moves[0]; // Fallback
+                    chosenMove = moves[0];
             }
 
             if (chosenMove) {
-                // Simulate a click event on the chosen cell
-                // This is important to trigger the handleMove function and all its side effects
                 const cellElement = boardElement.querySelector(`[data-row="${chosenMove.row}"][data-col="${chosenMove.col}"]`);
                 if (cellElement) {
-                    cellElement.click();
+                    window.handleMove({ target: cellElement }); // Call global handleMove
                 }
             }
         }
 
         function findBestMoveMedium(possibleMoves, player) {
             let bestMove = null;
-            let maxFlipped = -1; // Track the maximum number of pieces flipped
+            let maxFlipped = -1;
 
             const corners = [
                 {row: 0, col: 0}, {row: 0, col: 7},
                 {row: 7, col: 0}, {row: 7, col: 7}
             ];
 
-            // First, check for corners - always prioritize them
             for (const move of possibleMoves) {
                 if (corners.some(corner => corner.row === move.row && corner.col === move.col)) {
-                    return move; // Take the corner immediately
+                    return move;
                 }
             }
 
-            // If no corners, find the move that flips the most pieces
             for (const move of possibleMoves) {
-                const tempBoard = getDeepCopy(board); // Create a temporary board to simulate the move
-                // Simulate placing the piece and flipping others
+                const tempBoard = getDeepCopy(board);
                 tempBoard[move.row][move.col] = player;
                 const flippedCount = flipPieces(move.row, move.col, player, tempBoard);
 
@@ -1188,26 +1128,20 @@
                     bestMove = move;
                 }
             }
-            return bestMove || possibleMoves[0]; // Fallback to the first available move if no pieces flipped (shouldn't happen with isValidMove)
+            return bestMove || possibleMoves[0];
         }
 
-        // Minimax Algorithm (simplified for Othello)
         function minimax(currentBoardState, depth, maximizingPlayer, player) {
             const opponent = getOpponent(player);
 
-            // Base case: if depth is 0 or game is over
-            // A simple check for game over: no possible moves for either player
             if (depth === 0 || (getPossibleMoves(player, currentBoardState).length === 0 && getPossibleMoves(opponent, currentBoardState).length === 0)) {
                 return { score: getScoreForBoard(currentBoardState, player) };
             }
 
-            // Determine whose turn it is in the simulated game tree
             const currentPlayerInMinimax = maximizingPlayer ? player : opponent;
             const moves = getPossibleMoves(currentPlayerInMinimax, currentBoardState);
 
-            // If no moves for the current player in minimax, simulate a skip
             if (moves.length === 0) {
-                // Recursively call minimax for the next player's turn with reduced depth
                 return minimax(currentBoardState, depth - 1, !maximizingPlayer, player);
             }
 
@@ -1220,14 +1154,14 @@
                     newBoard[move.row][move.col] = currentPlayerInMinimax;
                     flipPieces(move.row, move.col, currentPlayerInMinimax, newBoard);
 
-                    const score = minimax(newBoard, depth - 1, false, player).score; // Recursively call for minimizing player
+                    const score = minimax(newBoard, depth - 1, false, player).score;
                     if (score > bestScore) {
                         bestScore = score;
                         bestMove = move;
                     }
                 }
                 return { score: bestScore, move: bestMove };
-            } else { // Minimizing player
+            } else {
                 let bestScore = Infinity;
                 let bestMove = null;
 
@@ -1236,7 +1170,7 @@
                     newBoard[move.row][move.col] = currentPlayerInMinimax;
                     flipPieces(move.row, move.col, currentPlayerInMinimax, newBoard);
 
-                    const score = minimax(newBoard, depth - 1, true, player).score; // Recursively call for maximizing player
+                    const score = minimax(newBoard, depth - 1, true, player).score;
                     if (score < bestScore) {
                         bestScore = score;
                         bestMove = move;
@@ -1247,9 +1181,8 @@
         }
 
         function findBestMoveMinimax(currentBoard, player, depth) {
-            // Initial call to minimax to find the best move for the 'player'
             const result = minimax(currentBoard, depth, true, player);
-            return result; // Returns an object like {score: ..., move: {row: ..., col: ...}}
+            return result;
         }
 
     </script>
