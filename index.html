@@ -14,7 +14,7 @@
         import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, limit, getDocs, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
         import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
 
-        // Your Firebase configuration (provided by the user)
+        // Your Firebase configuration (provided by the user) - declared only once.
         const firebaseConfig = {
           apiKey: "AIzaSyAUA91LXtcccAxl9OADnsYQwy1NPqjQgCA",
           authDomain: "othelloo-f8fac.firebaseapp.com",
@@ -26,8 +26,8 @@
         };
 
         // Determine the appId to be used for Firestore paths.
-        // In a self-contained file for GitHub Pages, we use projectId from firebaseConfig.
-        // The __app_id variable is typically for Canvas environments.
+        // For a self-contained file like this on GitHub Pages, we can use projectId from firebaseConfig.
+        // The __app_id variable is typically for Canvas environments that inject it.
         const appId = firebaseConfig.projectId; // Using projectId as the application ID for Firestore paths
 
         // Initialize Firebase app
@@ -41,12 +41,23 @@
         window.auth = auth;
         window.appId = appId;
 
+        // Get references to the multiplayer buttons to enable/disable them
+        const createGameButton = document.getElementById('create-game-button');
+        const joinGameButton = document.getElementById('join-game-button');
+        const refreshGamesButton = document.getElementById('refresh-games-button');
+
+
         // Firebase Anonymous Authentication
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 console.log("Firebase authenticated:", user.uid);
                 window.currentUserUid = user.uid; // Store current user's UID globally
                 document.getElementById('auth-status').textContent = `Authenticated: ${user.uid.substring(0, 8)}...`;
+                // Enable multiplayer buttons once authenticated
+                if (createGameButton) createGameButton.disabled = false;
+                if (joinGameButton) joinGameButton.disabled = false;
+                if (refreshGamesButton) refreshGamesButton.disabled = false;
+
 
                 // Check if a game ID is in the URL to auto-join
                 const urlParams = new URLSearchParams(window.location.search);
@@ -60,10 +71,15 @@
                 }
             } else {
                 console.log("Firebase not authenticated. Signing in anonymously...");
-                // Sign in anonymously if not already authenticated
+                // Disable multiplayer buttons if not authenticated
+                if (createGameButton) createGameButton.disabled = true;
+                if (joinGameButton) joinGameButton.disabled = true;
+                if (refreshGamesButton) refreshGamesButton.disabled = true;
+
+                document.getElementById('auth-status').textContent = `Authenticating...`;
                 signInAnonymously(auth).catch((error) => {
                     console.error("Anonymous sign-in failed:", error);
-                    document.getElementById('auth-status').textContent = `Authentication failed: ${error.message}`;
+                    document.getElementById('auth-status').textContent = `Authentication failed: ${error.message}. Please refresh the page.`;
                 });
             }
         });
@@ -141,7 +157,7 @@
                 }
             }, (error) => {
                 console.error("Error listening to game:", error);
-                alert("There was an error syncing with the game. Please try again.");
+                alert("There was an error syncing with the game. Please refresh the page.");
             });
         };
 
@@ -267,6 +283,11 @@
         .selection-container button:active, .difficulty-container button:active, .info button:active,
         .lobby-controls button:active {
             transform: translateY(0); /* Press down on click */
+        }
+
+        .lobby-controls button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
 
         .difficulty-container {
@@ -444,13 +465,13 @@
         <h2>Multiplayer Lobby</h2>
         <div class="lobby-controls">
             <input type="text" id="game-id-input" placeholder="Enter Game ID">
-            <button onclick="createGame()">Create Game</button>
-            <button onclick="joinGame()">Join Game</button>
+            <button id="create-game-button" onclick="createGame()" disabled>Create Game</button>
+            <button id="join-game-button" onclick="joinGame()" disabled>Join Game</button>
         </div>
         <div class="available-games-list">
             <h3>Available Games:</h3>
             <div id="available-games">Loading games...</div>
-            <button onclick="refreshAvailableGames()">Refresh List</button>
+            <button id="refresh-games-button" onclick="refreshAvailableGames()" disabled>Refresh List</button>
         </div>
         <div class="current-game-info hidden" id="current-game-info">
             <p>Game ID: <span id="display-game-id"></span></p>
@@ -508,7 +529,7 @@
         const db = window.db;
         const auth = window.auth;
         const appId = window.appId; // This now correctly uses firebaseConfig.projectId
-        const currentUserUid = window.currentUserUid;
+        const currentUserUid = window.currentUserUid; // This will be populated by onAuthStateChanged
         const createFirebaseGame = window.createFirebaseGame;
         const joinFirebaseGame = window.joinFirebaseGame;
         const updateFirebaseBoard = window.updateFirebaseBoard;
@@ -554,8 +575,9 @@
         // --- Multiplayer Lobby Functions ---
 
         async function createGame() {
-            if (!currentUserUid) {
-                alert("Authentication is not complete. Please wait a moment and try again.");
+            // Check if currentUserUid is available before proceeding
+            if (!window.currentUserUid) {
+                alert("Authentication is not complete. Please wait a moment for 'Authenticating...' status to change.");
                 return;
             }
             const gameId = generateGameId();
@@ -565,7 +587,7 @@
             currentGameId = gameId; // Store the created game ID
 
             try {
-                await createFirebaseGame(gameId, currentUserUid);
+                await createFirebaseGame(gameId, window.currentUserUid);
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
                 // Listen for updates to this game (especially for a second player joining)
@@ -593,8 +615,9 @@
         }
 
         async function joinGame() {
-            if (!currentUserUid) {
-                alert("Authentication is not complete. Please wait a moment and try again.");
+            // Check if currentUserUid is available before proceeding
+            if (!window.currentUserUid) {
+                alert("Authentication is not complete. Please wait a moment for 'Authenticating...' status to change.");
                 return;
             }
             const gameId = gameIdInput.value.trim();
@@ -604,7 +627,7 @@
             }
 
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                const joined = await joinFirebaseGame(gameId, window.currentUserUid);
                 if (joined) {
                     displayGameId.textContent = gameId;
                     yourColorElement.textContent = "White (Player 2)";
@@ -632,14 +655,14 @@
 
         // Joins game if gameId is present in URL on page load
         async function joinGameFromUrl(gameId) {
-            if (!currentUserUid) {
+            if (!window.currentUserUid) {
                 // This function might be called before authentication completes.
                 // `onAuthStateChanged` will re-call this once `currentUserUid` is set.
                 return;
             }
             console.log(`Attempting to join game from URL: ${gameId}`);
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                const joined = await joinFirebaseGame(gameId, window.currentUserUid);
                 if (joined) {
                     // If successfully joined, navigate to game view
                     initialSetup.classList.add('hidden');
@@ -675,6 +698,10 @@
         }
 
         async function refreshAvailableGames() {
+            if (!window.currentUserUid) {
+                availableGamesDiv.innerHTML = 'Please wait for authentication to complete.';
+                return;
+            }
             availableGamesDiv.innerHTML = 'Loading games...'; // Show loading state
             try {
                 const games = await getAvailableGames();
@@ -904,7 +931,8 @@
             // In multiplayer, only allow moves if it's your turn and you are the current player
             if (gameMode === 'multiplayer' && (currentPlayer !== playerColor || !currentGameId)) {
                 if (gameMode === 'multiplayer' && !currentGameId) {
-                    alert("Game not joined. Please create or join a game in the lobby.");
+                    // Should not happen if buttons are disabled until authenticated
+                    console.warn("Game not joined. Button clicked before game setup complete.");
                 } else if (gameMode === 'multiplayer' && currentPlayer !== playerColor) {
                     alert("It's not your turn.");
                 }
@@ -924,69 +952,54 @@
             tempBoard[row][col] = currentPlayer;
             flipPieces(row, col, currentPlayer, tempBoard);
 
-            const nextPlayer = getOpponent(currentPlayer);
-            let nextPossibleMoves = getPossibleMoves(nextPlayer, tempBoard);
+            let nextPlayerToMove = getOpponent(currentPlayer);
+            let possibleMovesForNextPlayer = getPossibleMoves(nextPlayerToMove, tempBoard);
 
             let gameEndStatus = 'playing';
             let currentAlertMessage = null;
 
-            if (nextPossibleMoves.length === 0) {
-                const opponentOfNextPlayer = getOpponent(nextPlayer);
-                const opponentOfNextPlayerMoves = getPossibleMoves(opponentOfNextPlayer, tempBoard);
-
-                if (opponentOfNextPlayerMoves.length > 0) {
-                    // Current player's opponent (nextPlayer) has no moves, so current player goes again
-                    currentAlertMessage = `${nextPlayer.charAt(0).toUpperCase() + nextPlayer.slice(1)} has no moves and skips their turn. It's ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn again!`;
-                    // If the current player (who is about to take another turn) also has no moves, then game ends
-                    if (getPossibleMoves(currentPlayer, tempBoard).length === 0) {
-                        gameEndStatus = 'finished';
-                    } else {
-                        // If current player has moves, stay on current player
-                        // No change to currentPlayer variable here, effectively skipping opponent's turn
-                        // The game will proceed with the current player's turn after the alert
-                    }
+            if (possibleMovesForNextPlayer.length === 0) {
+                // The next player has no moves. Check if the current player has moves.
+                const possibleMovesForCurrentPlayerAgain = getPossibleMoves(currentPlayer, tempBoard);
+                if (possibleMovesForCurrentPlayerAgain.length > 0) {
+                    // Current player (who just moved) gets another turn because the opponent has no moves
+                    currentAlertMessage = `${nextPlayerToMove.charAt(0).toUpperCase() + nextPlayerToMove.slice(1)} has no moves and skips their turn. It's ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn again!`;
+                    nextPlayerToMove = currentPlayer; // Stay on the same player
+                    possibleMovesForNextPlayer = possibleMovesForCurrentPlayerAgain; // Update possible moves
                 } else {
                     // Neither player has moves, game over
                     gameEndStatus = 'finished';
                 }
             }
 
-
-            // Update the actual game board state after all logic
+            // Update the actual game board state
             board = tempBoard;
+            currentPlayer = nextPlayerToMove; // Set the new current player
+            possibleMoves = possibleMovesForNextPlayer; // Update possible moves for the new current player
 
             // Handle turn progression and UI/Firebase updates
             if (gameEndStatus === 'finished') {
                 if (gameMode === 'multiplayer' && currentGameId) {
                      await updateFirebaseBoard(currentGameId, board, currentPlayer, 'finished');
-                } else { // Single player or multiplayer game just ended locally
+                } else { // Single player or multiplayer game just ended locally (before Firebase update)
                      endGame(); // Display winner modal
                 }
             } else {
-                // If a turn was skipped and it's still the same player's turn, we don't change currentPlayer
-                if (currentAlertMessage) {
-                    // If opponent skipped, and current player has moves, current player stays
-                    // This means currentPlayer variable does not change here.
-                } else {
-                    // Normal turn progression
-                    currentPlayer = nextPlayer;
-                }
-                possibleMoves = getPossibleMoves(currentPlayer); // Recalculate possible moves for the (potentially new) current player
+                // Update UI immediately
+                updateBoardDisplay();
+                updateTurnDisplay();
+                updateScoreDisplay();
 
-                // For single player or multiplayer, update the board in Firebase
-                if (gameMode === 'multiplayer' && currentGameId) {
+                if (currentAlertMessage) {
+                    alert(currentAlertMessage);
+                }
+
+                // If it's PVC mode and it's the computer's turn, initiate AI move
+                if (gameMode === 'pvc' && currentPlayer === 'white') {
+                    setTimeout(computerMove, getComputerDelay());
+                } else if (gameMode === 'multiplayer' && currentGameId) {
+                    // For multiplayer, push the state to Firebase
                     await updateFirebaseBoard(currentGameId, board, currentPlayer, 'playing');
-                } else { // Single player mode
-                    updateBoardDisplay();
-                    updateTurnDisplay();
-                    updateScoreDisplay();
-                    if (currentAlertMessage) {
-                        alert(currentAlertMessage);
-                    }
-                    // If it's PVC mode and it's the computer's turn, initiate AI move
-                    if (gameMode === 'pvc' && currentPlayer === 'white') {
-                        setTimeout(computerMove, getComputerDelay());
-                    }
                 }
             }
         }
