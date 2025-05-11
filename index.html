@@ -39,6 +39,8 @@
         window.db = db;
         window.auth = auth;
         window.appId = appId;
+        // currentUserUid will be set via onAuthStateChanged and accessed via window.currentUserUid
+        window.currentUserUid = null;
 
         // Get references to the multiplayer buttons to enable/disable them
         const createGameButton = document.getElementById('create-game-button');
@@ -50,7 +52,7 @@
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 console.log("Firebase authenticated:", user.uid);
-                window.currentUserUid = user.uid; // Store current user's UID globally
+                window.currentUserUid = user.uid; // Ensure global variable is updated
                 document.getElementById('auth-status').textContent = `Authenticated: ${user.uid.substring(0, 8)}...`;
                 // Enable multiplayer buttons once authenticated
                 if (createGameButton) createGameButton.disabled = false;
@@ -527,30 +529,19 @@
         const db = window.db;
         const auth = window.auth;
         const appId = window.appId;
-        let currentUserUid = window.currentUserUid; // Will be updated by onAuthStateChanged
+        // window.currentUserUid is updated by onAuthStateChanged, use that directly or auth.currentUser.uid
         const createFirebaseGame = window.createFirebaseGame;
         const joinFirebaseGame = window.joinFirebaseGame;
         const updateFirebaseBoard = window.updateFirebaseBoard;
         const listenToFirebaseGame = window.listenToFirebaseGame;
         const getAvailableGames = window.getAvailableGames;
 
-        // Re-check and update currentUserUid when script runs and ensure buttons are disabled initially
+        // Ensure buttons are disabled initially (this is also handled by the module script)
         document.addEventListener('DOMContentLoaded', () => {
-            // Initial state for multiplayer buttons
             if (createGameButton) createGameButton.disabled = true;
             if (joinGameButton) joinGameButton.disabled = true;
             if (refreshGamesButton) refreshGamesButton.disabled = true;
         });
-
-        // This ensures currentUserUid is up-to-date immediately if auth state changes
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUserUid = user.uid;
-            } else {
-                currentUserUid = null;
-            }
-        });
-
 
         // --- UI Control Functions ---
         function showDifficultySelection() {
@@ -590,14 +581,14 @@
         // --- Multiplayer Lobby Functions ---
 
         async function createGame() {
-            // Log the current user UID for debugging
-            console.log("Attempting to create game. Current User UID:", currentUserUid);
-
-            // Check if currentUserUid is available before proceeding
-            if (!currentUserUid) {
+            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
+            const currentUserId = auth.currentUser?.uid;
+            if (!currentUserId) {
                 alert("Authentication is not complete. Please wait for 'Authenticating...' status to change and the buttons to enable.");
                 return;
             }
+            console.log("Attempting to create game. Current User UID:", currentUserId); // Debug log
+
             const gameId = generateGameId();
             displayGameId.textContent = gameId;
             yourColorElement.textContent = "Black (Player 1)";
@@ -605,8 +596,7 @@
             currentGameId = gameId; // Store the created game ID
 
             try {
-                // Use currentUserUid directly
-                await createFirebaseGame(gameId, currentUserUid);
+                await createFirebaseGame(gameId, currentUserId); // Use currentUserId
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
                 // Listen for updates to this game (especially for a second player joining)
@@ -634,14 +624,14 @@
         }
 
         async function joinGame() {
-            // Log the current user UID for debugging
-            console.log("Attempting to join game. Current User UID:", currentUserUid);
-
-            // Check if currentUserUid is available before proceeding
-            if (!currentUserUid) {
+            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
+            const currentUserId = auth.currentUser?.uid;
+            if (!currentUserId) {
                 alert("Authentication is not complete. Please wait for 'Authenticating...' status to change and the buttons to enable.");
                 return;
             }
+            console.log("Attempting to join game. Current User UID:", currentUserId); // Debug log
+
             const gameId = gameIdInput.value.trim();
             if (!gameId) {
                 alert("Please enter a Game ID.");
@@ -649,8 +639,7 @@
             }
 
             try {
-                // Use currentUserUid directly
-                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                const joined = await joinFirebaseGame(gameId, currentUserId); // Use currentUserId
                 if (joined) {
                     displayGameId.textContent = gameId;
                     yourColorElement.textContent = "White (Player 2)";
@@ -678,15 +667,17 @@
 
         // Joins game if gameId is present in URL on page load
         async function joinGameFromUrl(gameId) {
-            if (!currentUserUid) {
+            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
+            const currentUserId = auth.currentUser?.uid;
+            if (!currentUserId) {
                 // This function might be called before authentication completes.
                 // `onAuthStateChanged` will re-call this once `currentUserUid` is set.
                 return;
             }
-            console.log(`Attempting to join game from URL: ${gameId}`);
+            console.log(`Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`); // Debug log
+
             try {
-                // Use currentUserUid directly
-                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                const joined = await joinFirebaseGame(gameId, currentUserId); // Use currentUserId
                 if (joined) {
                     // If successfully joined, navigate to game view
                     initialSetup.classList.add('hidden');
@@ -722,7 +713,9 @@
         }
 
         async function refreshAvailableGames() {
-            if (!currentUserUid) {
+            // Access currentUserUid directly from auth.currentUser
+            const currentUserId = auth.currentUser?.uid;
+            if (!currentUserId) {
                 availableGamesDiv.innerHTML = 'Please wait for authentication to complete.';
                 return;
             }
@@ -772,8 +765,8 @@
             board = gameData.board;
             currentPlayer = gameData.currentPlayer;
             // Ensure playerColor is correctly set for the client from gameData.players
-            if (gameData.players && gameData.players.length > 0 && currentUserUid) {
-                const selfPlayer = gameData.players.find(p => p.uid === currentUserUid);
+            if (gameData.players && gameData.players.length > 0 && auth.currentUser?.uid) {
+                const selfPlayer = gameData.players.find(p => p.uid === auth.currentUser.uid);
                 if (selfPlayer) {
                     playerColor = selfPlayer.color;
                     yourColorElement.textContent = `${selfPlayer.color.charAt(0).toUpperCase() + selfPlayer.color.slice(1)} (Player ${selfPlayer.color === 'black' ? '1' : '2'})`;
@@ -999,7 +992,7 @@
             // Update the actual game board state
             board = tempBoard;
             currentPlayer = nextPlayerToMove; // Set the new current player
-            possibleMoves = possiblePossibleMovesForNextPlayer; // Update possible moves for the new current player
+            possibleMoves = possibleMovesForNextPlayer; // Update possible moves for the new current player
 
             // Handle turn progression and UI/Firebase updates
             if (gameEndStatus === 'finished') {
