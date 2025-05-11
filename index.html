@@ -3,10 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Othello</title>
+    <title>Othello Multiplayer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <script type="module">
+        // Import necessary Firebase modules
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, query, where, limit, getDocs, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-firestore.js";
+
+        // Your Firebase configuration (provided by the user)
+        const firebaseConfig = {
+          apiKey: "AIzaSyAUA91LXtcccAxl9OADnsYQwy1NPqjQgCA",
+          authDomain: "othelloo-f8fac.firebaseapp.com",
+          projectId: "othelloo-f8fac",
+          storageBucket: "othelloo-f8fac.firebasestorage.app",
+          messagingSenderId: "918267777112",
+          appId: "1:918267777112:web:2c14924573793129573a2d",
+          measurementId: "G-5RVK6DT5W0"
+        };
+
+        // Determine the appId to be used for Firestore paths.
+        // In a self-contained file for GitHub Pages, we use projectId from firebaseConfig.
+        // The __app_id variable is typically for Canvas environments.
+        const appId = firebaseConfig.projectId; // Using projectId as the application ID for Firestore paths
+
+        // Initialize Firebase app
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        setLogLevel('Debug'); // Enable Firestore debug logging for console output
+
+        // Make Firebase instances and appId globally accessible for other game functions
+        window.db = db;
+        window.auth = auth;
+        window.appId = appId;
+
+        // Firebase Anonymous Authentication
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                console.log("Firebase authenticated:", user.uid);
+                window.currentUserUid = user.uid; // Store current user's UID globally
+                document.getElementById('auth-status').textContent = `Authenticated: ${user.uid.substring(0, 8)}...`;
+
+                // Check if a game ID is in the URL to auto-join
+                const urlParams = new URLSearchParams(window.location.search);
+                const gameIdFromUrl = urlParams.get('gameId');
+                if (gameIdFromUrl) {
+                    document.getElementById('game-id-input').value = gameIdFromUrl; // Pre-fill input
+                    joinGameFromUrl(gameIdFromUrl); // Attempt to join
+                } else {
+                    // If no gameId in URL, show the initial game type selection
+                    document.getElementById('initial-setup').classList.remove('hidden');
+                }
+            } else {
+                console.log("Firebase not authenticated. Signing in anonymously...");
+                // Sign in anonymously if not already authenticated
+                signInAnonymously(auth).catch((error) => {
+                    console.error("Anonymous sign-in failed:", error);
+                    document.getElementById('auth-status').textContent = `Authentication failed: ${error.message}`;
+                });
+            }
+        });
+
+        // Firebase Interaction Functions (made globally accessible)
+        window.createFirebaseGame = async (gameId, player1Uid) => {
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            const initialBoard = Array(8).fill(null).map(() => Array(8).fill(null));
+            initialBoard[3][3] = 'white';
+            initialBoard[4][4] = 'white';
+            initialBoard[3][4] = 'black';
+            initialBoard[4][3] = 'black';
+
+            const gameData = {
+                gameId: gameId,
+                players: [{uid: player1Uid, color: 'black'}], // Creator is Player 1 (Black)
+                board: initialBoard,
+                currentPlayer: 'black',
+                status: 'waiting', // 'waiting', 'playing', 'finished'
+                lastMoveTimestamp: Date.now()
+            };
+            await setDoc(gameRef, gameData);
+            console.log("Game created in Firestore:", gameId);
+        };
+
+        window.joinFirebaseGame = async (gameId, player2Uid) => {
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            const gameSnap = await getDoc(gameRef);
+
+            if (gameSnap.exists()) {
+                const gameData = gameSnap.data();
+                // Check if there's only one player and it's not the joining player
+                if (gameData.players.length === 1 && gameData.players[0].uid !== player2Uid) {
+                    await updateDoc(gameRef, {
+                        players: arrayUnion({uid: player2Uid, color: 'white'}), // Add Player 2 (White)
+                        status: 'playing' // Change game status to playing
+                    });
+                    console.log("Joined game in Firestore:", gameId);
+                    return true;
+                } else if (gameData.players.some(p => p.uid === player2Uid)) {
+                     console.log("Rejoining existing game:", gameId);
+                     return true; // Already in the game, just rejoining
+                } else if (gameData.players.length === 2) {
+                    alert("This game is already full.");
+                    return false;
+                }
+            } else {
+                alert("Game ID does not exist.");
+                return false;
+            }
+        };
+
+        window.updateFirebaseBoard = async (gameId, newBoard, nextPlayer, newStatus) => {
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            await updateDoc(gameRef, {
+                board: newBoard,
+                currentPlayer: nextPlayer,
+                status: newStatus,
+                lastMoveTimestamp: Date.now() // Update timestamp on every move
+            });
+        };
+
+        window.listenToFirebaseGame = (gameId, callback) => {
+            const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
+            // Set up a real-time listener for game changes
+            return onSnapshot(gameRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    callback(docSnap.data()); // Pass the updated game data to the callback
+                } else {
+                    console.error("Game document no longer exists!");
+                    alert("The game you were in no longer exists. Returning to lobby.");
+                    closeWinnerModal(); // Force close if game disappears
+                    // Consider also leaving the lobby if the game doesn't exist.
+                    showMultiplayerLobby();
+                }
+            }, (error) => {
+                console.error("Error listening to game:", error);
+                alert("There was an error syncing with the game. Please try again.");
+            });
+        };
+
+        window.getAvailableGames = async () => {
+            const gamesCollectionRef = collection(db, `artifacts/${appId}/public/data/games`);
+            // Query for games that are in 'waiting' status and limit to 10 for display
+            const q = query(gamesCollectionRef, where("status", "==", "waiting"), limit(10));
+            const querySnapshot = await getDocs(q);
+            const availableGames = [];
+            querySnapshot.forEach((doc) => {
+                availableGames.push(doc.data().gameId);
+            });
+            return availableGames;
+        };
+    </script>
     <style>
         body {
             font-family: 'Google Sans', sans-serif;
@@ -17,6 +167,18 @@
             min-height: 100vh;
             margin: 0;
             flex-direction: column; /* Stack the selection and game */
+        }
+
+        .auth-status {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background-color: #e0c8a9;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            color: #5e503f;
+            z-index: 100;
         }
 
         .modal {
@@ -82,7 +244,8 @@
             margin-bottom: 15px;
         }
 
-        .selection-container button, .difficulty-container button, .info button {
+        .selection-container button, .difficulty-container button, .info button,
+        .lobby-controls button {
             font-family: 'Google Sans', sans-serif;
             background-color: #c6b8a9; /* Lighter earthy tone */
             color: #5e503f; /* Earthy text color */
@@ -96,11 +259,13 @@
             outline: none; /* Remove outline on focus */
         }
 
-        .selection-container button:hover, .difficulty-container button:hover, .info button:hover {
+        .selection-container button:hover, .difficulty-container button:hover, .info button:hover,
+        .lobby-controls button:hover {
             background-color: #b0a194; /* Slightly darker hover */
             transform: translateY(-2px); /* Subtle lift on hover */
         }
-        .selection-container button:active, .difficulty-container button:active, .info button:active {
+        .selection-container button:active, .difficulty-container button:active, .info button:active,
+        .lobby-controls button:active {
             transform: translateY(0); /* Press down on click */
         }
 
@@ -117,6 +282,63 @@
             color: #5e503f;
             margin-bottom: 10px;
         }
+
+        .lobby-container {
+            background-color: #a08e79;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .lobby-container h2, .lobby-container h3 {
+            color: #5e503f;
+        }
+
+        .lobby-controls input[type="text"] {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #776e65;
+            margin-right: 10px;
+            font-family: 'Google Sans', sans-serif;
+            font-size: 16px;
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        .available-games-list {
+            margin-top: 20px;
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #776e65;
+            border-radius: 5px;
+            background-color: #e0c8a9;
+            padding: 10px;
+        }
+        .available-games-list button {
+            display: block;
+            width: calc(100% - 10px);
+            margin: 5px auto;
+            text-align: center;
+            padding: 8px;
+            background-color: #c6b8a9;
+            color: #5e503f;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .available-games-list button:hover {
+            background-color: #b0a194;
+        }
+
+        .current-game-info {
+            margin-top: 20px;
+            color: #5e503f;
+            font-size: 1.1em;
+        }
+
 
         .container {
             background-color: #a08e79;
@@ -201,6 +423,8 @@
     </style>
 </head>
 <body>
+    <div class="auth-status" id="auth-status">Authenticating...</div>
+
     <div class="modal" id="winner-modal">
         <div class="modal-content">
             <span class="close-button" onclick="closeWinnerModal()">&times;</span>
@@ -210,10 +434,30 @@
         </div>
     </div>
 
-    <div class="selection-container" id="game-mode-selection">
-        <h2>Choose Game Mode</h2>
-        <button onclick="showDifficultySelection()">Player vs Computer</button>
-        <button onclick="startGame('pvp')">Player vs Player</button>
+    <div class="selection-container hidden" id="initial-setup">
+        <h2>Choose Game Type</h2>
+        <button onclick="showMultiplayerLobby()">Multiplayer</button>
+        <button onclick="showDifficultySelection()">Single Player (vs Computer)</button>
+    </div>
+
+    <div class="lobby-container hidden" id="multiplayer-lobby">
+        <h2>Multiplayer Lobby</h2>
+        <div class="lobby-controls">
+            <input type="text" id="game-id-input" placeholder="Enter Game ID">
+            <button onclick="createGame()">Create Game</button>
+            <button onclick="joinGame()">Join Game</button>
+        </div>
+        <div class="available-games-list">
+            <h3>Available Games:</h3>
+            <div id="available-games">Loading games...</div>
+            <button onclick="refreshAvailableGames()">Refresh List</button>
+        </div>
+        <div class="current-game-info hidden" id="current-game-info">
+            <p>Game ID: <span id="display-game-id"></span></p>
+            <p>Your Color: <span id="your-color"></span></p>
+            <button onclick="leaveGame()">Leave Game</button>
+            <button onclick="copyGameLink()">Copy Game Link</button>
+        </div>
     </div>
 
     <div class="difficulty-container hidden" id="difficulty-selection">
@@ -234,7 +478,8 @@
     </div>
 
     <script>
-        const gameModeSelection = document.getElementById('game-mode-selection');
+        const initialSetup = document.getElementById('initial-setup');
+        const multiplayerLobby = document.getElementById('multiplayer-lobby');
         const difficultySelection = document.getElementById('difficulty-selection');
         const gameContainer = document.getElementById('game-container');
         const boardElement = document.getElementById('othello-board');
@@ -243,23 +488,53 @@
         const winnerModal = document.getElementById('winner-modal');
         const winnerMessage = document.getElementById('winner-message');
         const finalScoresElement = document.getElementById('final-scores');
+        const gameIdInput = document.getElementById('game-id-input');
+        const availableGamesDiv = document.getElementById('available-games');
+        const currentGameInfo = document.getElementById('current-game-info');
+        const displayGameId = document.getElementById('display-game-id');
+        const yourColorElement = document.getElementById('your-color');
 
         let board = Array(8).fill(null).map(() => Array(8).fill(null));
         let currentPlayer = 'black';
         let possibleMoves = [];
-        let gameMode = null; // 'pvp' or 'pvc'
+        let gameMode = null; // 'pvp', 'pvc', 'multiplayer'
         let computerDifficulty = null; // 'easy', 'medium', 'hard'
+        let playerColor = null; // 'black' or 'white' for the current user in multiplayer
+        let currentGameId = null; // The ID of the current multiplayer game
+        let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
+
+        // Global variables from Firebase SDK import (set on window by the module script)
+        // These are already initialized in the <script type="module"> block above
+        const db = window.db;
+        const auth = window.auth;
+        const appId = window.appId; // This now correctly uses firebaseConfig.projectId
+        const currentUserUid = window.currentUserUid;
+        const createFirebaseGame = window.createFirebaseGame;
+        const joinFirebaseGame = window.joinFirebaseGame;
+        const updateFirebaseBoard = window.updateFirebaseBoard;
+        const listenToFirebaseGame = window.listenToFirebaseGame;
+        const getAvailableGames = window.getAvailableGames;
+
 
         // --- UI Control Functions ---
         function showDifficultySelection() {
-            gameModeSelection.classList.add('hidden');
+            initialSetup.classList.add('hidden');
+            multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.remove('hidden');
+        }
+
+        function showMultiplayerLobby() {
+            initialSetup.classList.add('hidden');
+            difficultySelection.classList.add('hidden');
+            multiplayerLobby.classList.remove('hidden');
+            refreshAvailableGames(); // Load available games when entering lobby
         }
 
         function startGame(mode, difficulty = null) {
             gameMode = mode;
             computerDifficulty = difficulty;
-            gameModeSelection.classList.add('hidden');
+            initialSetup.classList.add('hidden');
+            multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
             resetGame(); // Call resetGame to initialize and display the board
@@ -267,10 +542,198 @@
 
         function closeWinnerModal() {
             winnerModal.style.display = 'none';
-            // Return to game mode selection after closing modal
+            // Return to initial setup or lobby after closing modal
             gameContainer.classList.add('hidden');
-            gameModeSelection.classList.remove('hidden');
+            if (gameMode === 'multiplayer') {
+                showMultiplayerLobby();
+            } else {
+                initialSetup.classList.remove('hidden');
+            }
         }
+
+        // --- Multiplayer Lobby Functions ---
+
+        async function createGame() {
+            if (!currentUserUid) {
+                alert("Authentication is not complete. Please wait a moment and try again.");
+                return;
+            }
+            const gameId = generateGameId();
+            displayGameId.textContent = gameId;
+            yourColorElement.textContent = "Black (Player 1)";
+            playerColor = 'black'; // Set current user's color
+            currentGameId = gameId; // Store the created game ID
+
+            try {
+                await createFirebaseGame(gameId, currentUserUid);
+                alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
+
+                // Listen for updates to this game (especially for a second player joining)
+                unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
+                    // Update local game state based on Firestore
+                    loadGameFromFirebase(gameData);
+
+                    if (gameData.status === 'playing' && gameData.players.length === 2) {
+                        // Game started, transition to game view if not already there
+                        multiplayerLobby.classList.add('hidden');
+                        gameContainer.classList.remove('hidden');
+                        // The loadGameFromFirebase already updates board, turn, score displays
+                    } else if (gameData.status === 'finished') {
+                        endGame(); // Display winner modal
+                    }
+                });
+
+                // Show game info and link to copy
+                currentGameInfo.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("Error creating game:", error);
+                alert("Failed to create game. Please try again.");
+            }
+        }
+
+        async function joinGame() {
+            if (!currentUserUid) {
+                alert("Authentication is not complete. Please wait a moment and try again.");
+                return;
+            }
+            const gameId = gameIdInput.value.trim();
+            if (!gameId) {
+                alert("Please enter a Game ID.");
+                return;
+            }
+
+            try {
+                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                if (joined) {
+                    displayGameId.textContent = gameId;
+                    yourColorElement.textContent = "White (Player 2)";
+                    playerColor = 'white'; // Set current user's color
+                    currentGameId = gameId; // Store the joined game ID
+
+                    // Listen for updates to this game
+                    unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
+                        loadGameFromFirebase(gameData); // Update local game state based on Firestore
+                        if (gameData.status === 'finished') {
+                            endGame(); // Display winner modal
+                        }
+                    });
+
+                    // Hide lobby and show game container
+                    multiplayerLobby.classList.add('hidden');
+                    gameContainer.classList.remove('hidden');
+                    currentGameInfo.classList.remove('hidden'); // Show game info
+                }
+            } catch (error) {
+                console.error("Error joining game:", error);
+                alert("Failed to join game. Make sure the ID is correct and the game is not full.");
+            }
+        }
+
+        // Joins game if gameId is present in URL on page load
+        async function joinGameFromUrl(gameId) {
+            if (!currentUserUid) {
+                // This function might be called before authentication completes.
+                // `onAuthStateChanged` will re-call this once `currentUserUid` is set.
+                return;
+            }
+            console.log(`Attempting to join game from URL: ${gameId}`);
+            try {
+                const joined = await joinFirebaseGame(gameId, currentUserUid);
+                if (joined) {
+                    // If successfully joined, navigate to game view
+                    initialSetup.classList.add('hidden');
+                    multiplayerLobby.classList.add('hidden');
+                    gameContainer.classList.remove('hidden');
+
+                    displayGameId.textContent = gameId;
+                    yourColorElement.textContent = "White (Player 2)"; // Default to white for joiner via URL
+                    playerColor = 'white';
+                    currentGameId = gameId;
+
+                    unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
+                        loadGameFromFirebase(gameData); // Update local game state from Firestore
+                        if (gameData.status === 'finished') {
+                            endGame();
+                        }
+                    });
+                    currentGameInfo.classList.remove('hidden');
+                } else {
+                    // If joining failed (e.g., game full or doesn't exist), return to initial setup
+                    initialSetup.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error("Error joining game from URL:", error);
+                alert("Could not join game from link. It might be invalid or full. Please try creating/joining manually.");
+                initialSetup.classList.remove('hidden');
+            }
+        }
+
+
+        function generateGameId() {
+            return Math.random().toString(36).substring(2, 9).toUpperCase(); // Simple 7-char ID
+        }
+
+        async function refreshAvailableGames() {
+            availableGamesDiv.innerHTML = 'Loading games...'; // Show loading state
+            try {
+                const games = await getAvailableGames();
+                availableGamesDiv.innerHTML = games.length > 0 ? '' : 'No games available.';
+                games.forEach(gameId => {
+                    const button = document.createElement('button');
+                    button.textContent = gameId;
+                    button.onclick = () => {
+                        gameIdInput.value = gameId;
+                        joinGame();
+                    };
+                    availableGamesDiv.appendChild(button);
+                });
+            } catch (error) {
+                console.error("Error refreshing available games:", error);
+                availableGamesDiv.innerHTML = 'Failed to load games. Please refresh.';
+            }
+        }
+
+        function leaveGame() {
+            if (unsubscribeFromGame) {
+                unsubscribeFromGame(); // Stop listening to Firestore
+            }
+            currentGameId = null;
+            playerColor = null;
+            gameContainer.classList.add('hidden');
+            currentGameInfo.classList.add('hidden');
+            gameIdInput.value = ''; // Clear the input field
+            showMultiplayerLobby(); // Go back to lobby
+        }
+
+        function copyGameLink() {
+            if (currentGameId) {
+                const gameLink = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`;
+                navigator.clipboard.writeText(gameLink)
+                    .then(() => alert("Game link copied to clipboard! Share it with a friend."))
+                    .catch(err => console.error("Could not copy text: ", err));
+            }
+        }
+
+        // This function updates the local game state (board, current player etc.)
+        // based on the data received from Firebase.
+        function loadGameFromFirebase(gameData) {
+            board = gameData.board;
+            currentPlayer = gameData.currentPlayer;
+            // Ensure playerColor is correctly set for the client from gameData.players
+            if (gameData.players && gameData.players.length > 0 && window.currentUserUid) {
+                const selfPlayer = gameData.players.find(p => p.uid === window.currentUserUid);
+                if (selfPlayer) {
+                    playerColor = selfPlayer.color;
+                    yourColorElement.textContent = `${selfPlayer.color.charAt(0).toUpperCase() + selfPlayer.color.slice(1)} (Player ${selfPlayer.color === 'black' ? '1' : '2'})`;
+                }
+            }
+            possibleMoves = getPossibleMoves(currentPlayer); // Calculate possible moves for the received current player
+            updateBoardDisplay();
+            updateTurnDisplay();
+            updateScoreDisplay();
+        }
+
 
         // --- Board Management Functions ---
         function initializeBoard() {
@@ -319,17 +782,27 @@
                 }
                 // Remove and re-add possible-move class for correct highlighting
                 cell.classList.remove('possible-move', 'white');
-                if (possibleMoves.some(move => move.row === row && move.col === col)) {
-                    cell.classList.add('possible-move');
-                    if (currentPlayer === 'white') {
-                        cell.classList.add('white'); // Apply white indicator for white's possible moves
+
+                // Only highlight moves for the current local player's turn, or for all in PvP/PvC
+                if (gameMode !== 'multiplayer' || (gameMode === 'multiplayer' && currentPlayer === playerColor)) {
+                     if (possibleMoves.some(move => move.row === row && move.col === col)) {
+                        cell.classList.add('possible-move');
+                        if (currentPlayer === 'white') {
+                            cell.classList.add('white'); // Apply white indicator for white's possible moves
+                        }
                     }
                 }
             });
         }
 
         function updateTurnDisplay() {
-            turnElement.textContent = `${currentPlayer === 'black' ? 'Black' : 'White'}'s Turn`;
+            let turnText = `${currentPlayer === 'black' ? 'Black' : 'White'}'s Turn`;
+            if (gameMode === 'multiplayer' && currentPlayer !== playerColor) {
+                turnText += " (Opponent's Turn)";
+            } else if (gameMode === 'multiplayer' && currentPlayer === playerColor) {
+                 turnText += " (Your Turn)";
+            }
+            turnElement.textContent = turnText;
         }
 
         function updateScoreDisplay() {
@@ -427,7 +900,17 @@
         }
 
         // --- Main Game Flow Handler ---
-        function handleMove(event) {
+        async function handleMove(event) {
+            // In multiplayer, only allow moves if it's your turn and you are the current player
+            if (gameMode === 'multiplayer' && (currentPlayer !== playerColor || !currentGameId)) {
+                if (gameMode === 'multiplayer' && !currentGameId) {
+                    alert("Game not joined. Please create or join a game in the lobby.");
+                } else if (gameMode === 'multiplayer' && currentPlayer !== playerColor) {
+                    alert("It's not your turn.");
+                }
+                return;
+            }
+
             const cell = event.target.closest('.cell');
             if (!cell || !cell.classList.contains('possible-move')) {
                 return; // Not a valid or highlighted move
@@ -436,45 +919,74 @@
             const row = parseInt(cell.dataset.row);
             const col = parseInt(cell.dataset.col);
 
-            // Place the current player's piece
-            board[row][col] = currentPlayer;
-            // Flip the opponent's pieces
-            flipPieces(row, col, currentPlayer, board);
+            // Create a temporary board to simulate the move and check post-move state
+            const tempBoard = getDeepCopy(board);
+            tempBoard[row][col] = currentPlayer;
+            flipPieces(row, col, currentPlayer, tempBoard);
 
-            // Update UI immediately after player's move
-            updateBoardDisplay();
-            updateScoreDisplay();
+            const nextPlayer = getOpponent(currentPlayer);
+            let nextPossibleMoves = getPossibleMoves(nextPlayer, tempBoard);
 
-            // Switch to the next player
-            currentPlayer = getOpponent(currentPlayer);
-            possibleMoves = getPossibleMoves(currentPlayer);
+            let gameEndStatus = 'playing';
+            let currentAlertMessage = null;
 
-            // Check for game end or skips
-            if (possibleMoves.length === 0) {
-                const opponentHasMoves = getPossibleMoves(getOpponent(currentPlayer)).length > 0;
-                if (opponentHasMoves) {
-                    // Current player has no moves, but opponent does. Skip turn.
-                    alert(`${currentPlayer === 'black' ? 'Black' : 'White'} has no moves and skips their turn.`);
-                    currentPlayer = getOpponent(currentPlayer); // Switch back to opponent
-                    possibleMoves = getPossibleMoves(currentPlayer); // Get moves for the player who just got skipped to
-                    updateTurnDisplay();
-                    updateBoardDisplay();
-                    // If it's PVC mode and the AI just skipped, let the AI make a move
-                    if (gameMode === 'pvc' && currentPlayer === 'white') {
-                        setTimeout(computerMove, getComputerDelay());
+            if (nextPossibleMoves.length === 0) {
+                const opponentOfNextPlayer = getOpponent(nextPlayer);
+                const opponentOfNextPlayerMoves = getPossibleMoves(opponentOfNextPlayer, tempBoard);
+
+                if (opponentOfNextPlayerMoves.length > 0) {
+                    // Current player's opponent (nextPlayer) has no moves, so current player goes again
+                    currentAlertMessage = `${nextPlayer.charAt(0).toUpperCase() + nextPlayer.slice(1)} has no moves and skips their turn. It's ${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}'s turn again!`;
+                    // If the current player (who is about to take another turn) also has no moves, then game ends
+                    if (getPossibleMoves(currentPlayer, tempBoard).length === 0) {
+                        gameEndStatus = 'finished';
+                    } else {
+                        // If current player has moves, stay on current player
+                        // No change to currentPlayer variable here, effectively skipping opponent's turn
+                        // The game will proceed with the current player's turn after the alert
                     }
                 } else {
                     // Neither player has moves, game over
-                    endGame();
-                    return;
+                    gameEndStatus = 'finished';
+                }
+            }
+
+
+            // Update the actual game board state after all logic
+            board = tempBoard;
+
+            // Handle turn progression and UI/Firebase updates
+            if (gameEndStatus === 'finished') {
+                if (gameMode === 'multiplayer' && currentGameId) {
+                     await updateFirebaseBoard(currentGameId, board, currentPlayer, 'finished');
+                } else { // Single player or multiplayer game just ended locally
+                     endGame(); // Display winner modal
                 }
             } else {
-                // Valid move made, and next player has moves
-                updateTurnDisplay();
-                updateBoardDisplay(); // Re-highlight possible moves for the new player
-                // If it's PVC mode and it's the computer's turn, initiate AI move
-                if (gameMode === 'pvc' && currentPlayer === 'white') {
-                    setTimeout(computerMove, getComputerDelay());
+                // If a turn was skipped and it's still the same player's turn, we don't change currentPlayer
+                if (currentAlertMessage) {
+                    // If opponent skipped, and current player has moves, current player stays
+                    // This means currentPlayer variable does not change here.
+                } else {
+                    // Normal turn progression
+                    currentPlayer = nextPlayer;
+                }
+                possibleMoves = getPossibleMoves(currentPlayer); // Recalculate possible moves for the (potentially new) current player
+
+                // For single player or multiplayer, update the board in Firebase
+                if (gameMode === 'multiplayer' && currentGameId) {
+                    await updateFirebaseBoard(currentGameId, board, currentPlayer, 'playing');
+                } else { // Single player mode
+                    updateBoardDisplay();
+                    updateTurnDisplay();
+                    updateScoreDisplay();
+                    if (currentAlertMessage) {
+                        alert(currentAlertMessage);
+                    }
+                    // If it's PVC mode and it's the computer's turn, initiate AI move
+                    if (gameMode === 'pvc' && currentPlayer === 'white') {
+                        setTimeout(computerMove, getComputerDelay());
+                    }
                 }
             }
         }
@@ -509,8 +1021,14 @@
         }
 
         function resetGame() {
-            initializeBoard();
-            createBoard(); // Recreate the board elements on reset
+            if (gameMode === 'multiplayer') {
+                // In multiplayer, reset is managed by Firebase updates.
+                // A player should "leave" the game and create/join a new one.
+                alert("To reset a multiplayer game, please leave the current game from the lobby and create/join a new one.");
+                return;
+            }
+            initializeBoard(); // Resets the internal board array and current player
+            createBoard(); // Recreates the HTML board elements
             updateTurnDisplay();
             updateScoreDisplay();
             possibleMoves = getPossibleMoves(currentPlayer); // Calculate initial possible moves
@@ -528,7 +1046,8 @@
             let opponentScore = 0;
             const opponent = getOpponent(player);
 
-            const WEIGHTS = [ // A simple board weighting for medium/hard AI
+            // Weights for board positions (corners are valuable, edges less so, squares next to corners negative)
+            const WEIGHTS = [
                 [100, -20, 10, 5, 5, 10, -20, 100],
                 [-20, -50, -2, -2, -2, -2, -50, -20],
                 [10, -2, 1, 1, 1, 1, -2, 10],
@@ -699,12 +1218,6 @@
             const result = minimax(currentBoard, depth, true, player);
             return result; // Returns an object like {score: ..., move: {row: ..., col: ...}}
         }
-
-
-        // --- Initial Setup (show game mode selection when page loads) ---
-        document.addEventListener('DOMContentLoaded', () => {
-            gameModeSelection.classList.remove('hidden');
-        });
 
     </script>
 </body>
