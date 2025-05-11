@@ -254,14 +254,14 @@
             gameModeSelection.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            initializeBoard(); // Initialize the board state
-            createBoard();      // Create the HTML elements for the board
+            initializeBoard();
+            createBoard();
             updateTurnDisplay();
             updateScoreDisplay();
             possibleMoves = getPossibleMoves(currentPlayer);
-            updateBoardDisplay(); // Highlight initial possible moves
+            updateBoardDisplay();
             if (gameMode === 'pvc' && currentPlayer === 'white') {
-                setTimeout(computerMove, 500); // Let computer make the first move if white
+                setTimeout(computerMove, 500);
             }
         }
 
@@ -453,4 +453,5 @@
             let blackCount = 0;
             let whiteCount = 0;
             for (let i = 0; i < 8; i++) {
-                for (let
+                for (let j = 0; j < 8; j++) {
+                    if (board[i][j] === 'black
