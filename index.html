@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Google Sans', sans-serif;
@@ -243,6 +244,30 @@
             border: 1px solid #ccc;
         }
 
+        /* Styles for a piece that is in a corner position */
+        .piece.corner-locked {
+            position: relative;
+            background-color: transparent !important; /* Hide the background color of the piece itself */
+            box-shadow: none !important; /* Remove shadow to make icon prominent */
+            border: none !important; /* Remove border */
+            display: flex; /* Use flex to center the icon */
+            justify-content: center;
+            align-items: center;
+            font-size: 2.2em; /* Adjust size of the icon */
+            color: #333; /* Default color for black castles */
+        }
+
+        .piece.corner-locked.white {
+            color: #f9f9f9; /* Color for white castles */
+        }
+
+        .piece.corner-locked::before {
+            font-family: "Font Awesome 6 Free"; /* Specify Font Awesome font */
+            font-weight: 900; /* Solid icon weight */
+            content: "\f447"; /* Unicode for fa-chess-rook icon */
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Add shadow to the icon itself */
+        }
+
         .cell.possible-move {
             background-color: #b0a194; /* Slightly darker hover for possible moves */
         }
@@ -270,6 +295,58 @@
 
         .info p {
             margin: 5px 0;
+        }
+
+        .rules-container {
+            background-color: #a08e79;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            margin-top: 20px;
+            width: 520px; /* Match board width */
+            text-align: center;
+            color: #5e503f;
+        }
+
+        .rules-container h3 {
+            color: #5e503f;
+            margin-bottom: 10px;
+        }
+
+        .rules-toggle {
+            width: auto;
+            padding: 10px 20px;
+            margin-bottom: 15px; /* Space between button and content */
+        }
+
+        .rules-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 0;
+        }
+
+        .rules-content.expanded {
+            max-height: 500px; /* Arbitrary large value to allow content to expand */
+            opacity: 1;
+        }
+
+        .rules-content ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+            margin: 0 auto;
+            max-width: 80%; /* Constrain width of list items */
+        }
+
+        .rules-content li {
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .rules-content b {
+            font-weight: 700;
+            color: #333;
         }
 
         .hidden {
@@ -332,6 +409,30 @@
             <button onclick="window.leaveGameFromInGame()">Back to Lobby</button> </div>
     </div>
 
+    <div class="rules-container">
+        <button class="rules-toggle" onclick="window.toggleRules()">Show Rules & Tips</button>
+        <div class="rules-content hidden" id="rules-tips-content">
+            <h3>Othello Rules</h3>
+            <ul>
+                <li>The game is played on an 8x8 board.</li>
+                <li>Starts with two black and two white pieces in the center.</li>
+                <li>Players take turns placing one piece of their color on the board.</li>
+                <li>A piece must be placed such that it "sandwiches" one or more of the opponent's pieces horizontally, vertically, or diagonally.</li>
+                <li>All sandwiched opponent's pieces are flipped to the current player's color.</li>
+                <li>If a player cannot make a valid move, they must pass their turn.</li>
+                <li>The game ends when neither player can make a valid move, or when the board is full.</li>
+                <li>The player with the most pieces on the board at the end wins.</li>
+            </ul>
+            <h3>Tips for Beginners</h3>
+            <ul>
+                <li><b>Corners are King:</b> Once you get a piece in a corner, it can never be flipped. Prioritize capturing corners!</li>
+                <li><b>Avoid Edges (Mostly):</b> Pieces on the edges are hard to flip, but pieces next to corners on edges can be dangerous.</li>
+                <li><b>Mobility is Key:</b> The player with more available moves often has an advantage. Try to limit your opponent's choices.</li>
+                <li><b>Don't Flip Too Many:</b> Sometimes flipping fewer pieces but taking a strategic position is better than flipping many for a bad spot.</li>
+            </ul>
+        </div>
+    </div>
+
     <script type="module">
         // Import necessary Firebase modules
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.6.0/firebase-app.js";
@@ -380,6 +481,8 @@
         const joinGameButton = document.getElementById('join-game-button');
         const refreshGamesButton = document.getElementById('refresh-games-button');
         const gameDisplayIdInGame = document.getElementById('game-display-id-in-game'); // For in-game display
+        const rulesContent = document.getElementById('rules-tips-content');
+        const rulesToggleButton = document.querySelector('.rules-toggle');
 
 
         // Game state variables
@@ -392,7 +495,7 @@
         let currentGameId = null; // The ID of the current multiplayer game
         let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
 
-        // Flag to ensure board HTML is rendered only once
+        // Flag to ensure board HTML is rendered only once (optimization)
         let boardHtmlRendered = false;
 
 
@@ -573,16 +676,18 @@
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
 
-            // Ensure board HTML layout is rendered when any game mode starts
+            // Always render board HTML layout when starting any game mode
             renderBoardHtmlLayout();
 
             if (gameMode === 'pvp' || gameMode === 'pvc') {
                 window.resetGame(); // Initialize game state for single-player/PvP
             } else { // Multiplayer
-                // Game ID is displayed on the game screen.
-                // The board data will be loaded via the Firebase listener in loadGameFromFirebase.
-                gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
+                // In multiplayer, the actual board data will be loaded via the Firebase listener
+                // gameDisplayIdInGame.textContent will be set in loadGameFromFirebase
+                // No initial board state setup needed here, as it comes from Firestore
             }
+            // Ensure the game ID is set on the game screen, regardless of when the board loads.
+            gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
         };
 
         window.closeWinnerModal = function() {
@@ -610,12 +715,13 @@
             displayGameId.textContent = gameId; // Update lobby game ID display
             yourColorElement.textContent = "Black (Player 1)";
             playerColor = 'black';
-            currentGameId = gameId; // Set currentGameId here
+            currentGameId = gameId; // Set currentGameId here for use in startGame and listener
 
             try {
                 await createFirebaseGame(gameId, currentUserId);
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
+                // Setup listener before transitioning, so board gets data immediately
                 unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
                     loadGameFromFirebase(gameData); // This will parse the board and update display
 
@@ -658,6 +764,7 @@
                     playerColor = 'white';
                     currentGameId = gameId; // Set currentGameId here
 
+                    // Setup listener before transitioning, so board gets data immediately
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
                         loadGameFromFirebase(gameData); // This will parse the board and update display
                         if (gameData.status === 'finished') {
@@ -694,6 +801,7 @@
                     playerColor = 'white';
                     currentGameId = gameId; // Set currentGameId here
 
+                    // Setup listener before transitioning, so board gets data immediately
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
                         loadGameFromFirebase(gameData); // This will parse the board and update display
                         if (gameData.status === 'finished') {
@@ -815,7 +923,7 @@
             currentPlayer = 'black';
         }
 
-        // Function to render the empty Othello grid HTML layout (called only once)
+        // Function to render the empty Othello grid HTML layout (called only once when game container is shown)
         function renderBoardHtmlLayout() {
             if (!boardHtmlRendered) {
                 boardElement.innerHTML = ''; // Clear any existing HTML
@@ -842,10 +950,19 @@
                 const col = parseInt(cell.dataset.col);
                 cell.innerHTML = ''; // Clear current piece (just the piece, not the cell HTML)
 
-                const piece = board[row][col]; // Use the global `board` state
-                if (piece) {
+                const pieceValue = board[row][col]; // Use the global `board` state
+                if (pieceValue) {
                     const pieceElement = document.createElement('div');
-                    pieceElement.classList.add('piece', piece);
+                    pieceElement.classList.add('piece', pieceValue); // Add 'black' or 'white' class
+
+                    // Check if the piece is in a corner
+                    const isCorner = (row === 0 && col === 0) || (row === 0 && col === 7) ||
+                                     (row === 7 && col === 0) || (row === 7 && col === 7);
+
+                    if (isCorner) {
+                        pieceElement.classList.add('corner-locked'); // Add special class for corner piece
+                    }
+
                     cell.appendChild(pieceElement);
                 }
                 cell.classList.remove('possible-move', 'white');
