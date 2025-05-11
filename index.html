@@ -324,19 +324,30 @@
             overflow: hidden;
             transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out;
             opacity: 0;
+            text-align: left; /* Align content within */
+            padding: 0 10px; /* Add some padding */
         }
 
         .rules-content.expanded {
             max-height: 500px; /* Arbitrary large value to allow content to expand */
             opacity: 1;
+            padding-bottom: 15px; /* Add padding when expanded */
         }
 
         .rules-content ul {
-            list-style: none;
-            padding: 0;
+            list-style: decimal; /* Use numbered list for rules */
+            padding-left: 20px; /* Indent list items */
             text-align: left;
             margin: 0 auto;
-            max-width: 80%; /* Constrain width of list items */
+            max-width: 90%; /* Constrain width of list items */
+        }
+
+        .rules-content ol {
+            list-style: disc; /* Use bullet points for tips */
+            padding-left: 20px;
+            text-align: left;
+            margin: 0 auto;
+            max-width: 90%;
         }
 
         .rules-content li {
@@ -411,24 +422,25 @@
 
     <div class="rules-container">
         <button class="rules-toggle" onclick="window.toggleRules()">Show Rules & Tips</button>
-        <div class="rules-content hidden" id="rules-tips-content">
+        <div class="rules-content" id="rules-tips-content">
             <h3>Othello Rules</h3>
-            <ul>
-                <li>The game is played on an 8x8 board.</li>
-                <li>Starts with two black and two white pieces in the center.</li>
-                <li>Players take turns placing one piece of their color on the board.</li>
-                <li>A piece must be placed such that it "sandwiches" one or more of the opponent's pieces horizontally, vertically, or diagonally.</li>
-                <li>All sandwiched opponent's pieces are flipped to the current player's color.</li>
-                <li>If a player cannot make a valid move, they must pass their turn.</li>
-                <li>The game ends when neither player can make a valid move, or when the board is full.</li>
-                <li>The player with the most pieces on the board at the end wins.</li>
-            </ul>
+            <ol>
+                <li>The game is played on an 8x8 board with two players, Black and White.</li>
+                <li>It starts with two black and two white pieces in the four central squares, with same-colored pieces on diagonals.</li>
+                <li>Players take turns placing one piece of their color on a vacant square.</li>
+                <li>A piece must be placed such that it "sandwiches" one or more of the opponent's pieces horizontally, vertically, or diagonally, between the newly placed piece and an existing piece of the current player's color.</li>
+                <li>All sandwiched opponent's pieces are immediately flipped to the current player's color. You must flip at least one piece to make a valid move.</li>
+                <li>If a player cannot make a valid move, they must pass their turn. The other player continues playing until a valid move is possible.</li>
+                <li>The game ends when neither player can make a valid move, or when the board is completely full (64 pieces).</li>
+                <li>The player with the most pieces on the board at the end of the game wins. If counts are equal, it's a draw.</li>
+            </ol>
             <h3>Tips for Beginners</h3>
             <ul>
-                <li><b>Corners are King:</b> Once you get a piece in a corner, it can never be flipped. Prioritize capturing corners!</li>
-                <li><b>Avoid Edges (Mostly):</b> Pieces on the edges are hard to flip, but pieces next to corners on edges can be dangerous.</li>
-                <li><b>Mobility is Key:</b> The player with more available moves often has an advantage. Try to limit your opponent's choices.</li>
-                <li><b>Don't Flip Too Many:</b> Sometimes flipping fewer pieces but taking a strategic position is better than flipping many for a bad spot.</li>
+                <li><b>Corners are King:</b> Once you place a piece in a corner, it can never be flipped. Prioritize capturing corners whenever possible. This is a powerful advantage!</li>
+                <li><b>Avoid Edges (Mostly):</b> Pieces on the edges can become stable (unflippable) if you control enough of them. However, be careful with squares directly next to corners on the edges (often called "X-squares" or "C-squares"), as these can often give your opponent access to the corner.</li>
+                <li><b>Mobility is Key:</b> The player with more available valid moves often has an advantage. Try to limit your opponent's choices while expanding your own.</li>
+                <li><b>Don't Flip Too Many (Early):</b> Sometimes, flipping a large number of pieces early in the game can be detrimental if it opens up strong positions (like corners) for your opponent. Focus on strategic placement over just maximizing flips.</li>
+                <li><b>Think Ahead:</b> Othello is a game of foresight. Try to visualize the board a few moves into the future to anticipate your opponent's strategy and plan your own.</li>
             </ul>
         </div>
     </div>
@@ -495,7 +507,7 @@
         let currentGameId = null; // The ID of the current multiplayer game
         let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
 
-        // Flag to ensure board HTML is rendered only once (optimization)
+        // Flag to ensure board HTML is rendered only once
         let boardHtmlRendered = false;
 
 
@@ -682,9 +694,9 @@
             if (gameMode === 'pvp' || gameMode === 'pvc') {
                 window.resetGame(); // Initialize game state for single-player/PvP
             } else { // Multiplayer
-                // In multiplayer, the actual board data will be loaded via the Firebase listener
-                // gameDisplayIdInGame.textContent will be set in loadGameFromFirebase
-                // No initial board state setup needed here, as it comes from Firestore
+                // Game ID is displayed on the game screen.
+                // The board data will be loaded via the Firebase listener in loadGameFromFirebase.
+                gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
             }
             // Ensure the game ID is set on the game screen, regardless of when the board loads.
             gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
@@ -1190,6 +1202,17 @@
                 setTimeout(computerMove, getComputerDelay());
             }
         };
+
+        // --- Rules and Tips Expander (exposed to window) ---
+        window.toggleRules = function() {
+            rulesContent.classList.toggle('expanded');
+            if (rulesContent.classList.contains('expanded')) {
+                rulesToggleButton.textContent = "Hide Rules & Tips";
+            } else {
+                rulesToggleButton.textContent = "Show Rules & Tips";
+            }
+        };
+
 
         // --- Computer AI Logic (internal to module, called by handleMove) ---
         function getScoreForBoard(currentBoard, player) {
