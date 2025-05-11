@@ -180,12 +180,12 @@
         const difficultyButtons = document.querySelectorAll('.difficulty-button');
 
         const BOARD_SIZE = 8;
-        let board = initializeBoard();
-        let currentPlayer = BLACK;
-        let gameOver = false;
-        let gameMode = 1;  // 1: Player vs Player, 2: Player vs Bot
-        let botDifficulty = 2; // 1: Easy, 2: Medium, 3: Hard
-        let selectedDifficultyButton = document.querySelector('[data-difficulty="2"]');
+        let board;
+        let currentPlayer;
+        let gameOver;
+        let gameMode;
+        let botDifficulty;
+        let selectedDifficultyButton;
 
         const BLACK = 'black';
         const WHITE = 'white';
@@ -464,8 +464,6 @@
             return score;
         }
 
-
-
         function resetGame() {
             board = initializeBoard();
             gameOver = false;
@@ -534,6 +532,14 @@
                 selectedDifficultyButton = button;
             });
         });
+
+        // Initialize game state
+        board = initializeBoard();
+        currentPlayer = BLACK;
+        gameOver = false;
+        gameMode = 1;
+        botDifficulty = 2;
+        selectedDifficultyButton = document.querySelector('[data-difficulty="2"]');
 
         renderBoard();
     </script>
