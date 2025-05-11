@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Othello Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: 'Press Start 2P', cursive;
+            margin: 0;
+              background: linear-gradient(135deg, #4a148c, #1a237e);
+        }
+        #board {
+            display: grid;
+            grid-template-columns: repeat(8, 80px);
+            grid-template-rows: repeat(8, 80px);
+            border: 4px solid #1a237e;
+            background-color: #006400;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+        .square {
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+             transition: background-color 0.2s; /* Smooth transition for hover effect */
+        }
+      .square:hover {
+            background-color: rgba(0, 100, 0, 0.8);
+        }
+        .black {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: black;
+            border: 2px solid #222;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .white {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: white;
+             border: 2px solid #ddd;
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+        .possible {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .button {
+            padding: 12px 24px;
+            font-size: 16px;
+            margin: 5px;
+            cursor: pointer;
+            background: linear-gradient(to bottom, #4CAF50, #388E3C);
+            border: none;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 150px;
+        }
+        .button:hover {
+          background: linear-gradient(to bottom, #66BB6A, #43A047);
+          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+          transform: translateY(-2px);
+        }
+        .button:active {
+           background: linear-gradient(to bottom, #388E3C, #2E7D32);
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+           transform: translateY(0);
+        }
+
+        #message-box {
+            font-size: 18px;
+            color: white;
+            margin-bottom: 20px;
+            min-height: 24px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px; /* Rounded corners for the message box */
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+       .selected {
+          border: 4px solid gold;
+          box-shadow: 0 0 10px gold;
+        }
+
+        .game-over-overlay {
+          position: fixed;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: rgba(0, 0, 0, 0.8);
+          z-index: 10;
+        }
+
+        .game-over-content {
+          background-color: #fff;
+          padding: 30px;
+          border-radius: 12px;
+          text-align: center;
+          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+          border: 4px solid #333;
+        }
+
+        .game-over-title {
+          font-size: 24px;
+          margin-bottom: 20px;
+          color: #222;
+        }
+
+        .game-over-winner {
+          font-size: 20px;
+          color: #e65100;
+          margin-bottom: 25px;
+        }
+
+    </style>
+</head>
+<body>
+    <div id="message-box"></div>
+    <div id="board"></div>
+    <div id="controls">
+        <button class="button" id="reset-button">Reset</button>
+        <button class="button" id="pvp-button">Player vs Player</button>
+        <button class="button" id="pvb-button">Player vs Bot</button>
+        <div id="difficulty-buttons" style="display: none;">
+            <button class="button difficulty-button" data-difficulty="1">Easy</button>
+            <button class="button difficulty-button selected" data-difficulty="2">Medium</button>
+            <button class="button difficulty-button" data-difficulty="3">Hard</button>
+        </div>
+    </div>
+    <script>
+        const boardElement = document.getElementById('board');
+        const messageBox = document.getElementById('message-box');
+        const resetButton = document.getElementById('reset-button');
+        const pvpButton = document.getElementById('pvp-button');
+        const pvbButton = document.getElementById('pvb-button');
+        const difficultyButtonsContainer = document.getElementById('difficulty-buttons');
+        const difficultyButtons = document.querySelectorAll('.difficulty-button');
+
+        const BOARD_SIZE = 8;
+        let board = initializeBoard();
+        let currentPlayer = BLACK;
+        let gameOver = false;
+        let gameMode = 1;  // 1: Player vs Player, 2: Player vs Bot
+        let botDifficulty = 2; // 1: Easy, 2: Medium, 3: Hard
+        let selectedDifficultyButton = document.querySelector('[data-difficulty="2"]');
+
+        const BLACK = 'black';
+        const WHITE = 'white';
+
+        let moveMade = false;
+
+        function initializeBoard() {
+            const board = [];
+            for (let i = 0; i < BOARD_SIZE; i++) {
+                board[i] = Array(BOARD_SIZE).fill(null);
+            }
+            const center = Math.floor(BOARD_SIZE / 2);
+            board[center - 1][center - 1] = WHITE;
+            board[center][center] = WHITE;
+            board[center - 1][center] = BLACK;
+            board[center][center - 1] = BLACK;
+            return board;
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    const square = document.createElement('div');
+                    square.classList.add('square');
+                    if (board[row][col]) {
+                        square.classList.add(board[row][col]);
+                    }
+                    if (isValidMove(board, currentPlayer, row, col)) {
+                        square.classList.add('possible');
+                    }
+                    square.addEventListener('click', () => handleMove(row, col));
+                    boardElement.appendChild(square);
+                }
+            }
+            updateMessageBox();
+        }
+
+        function isValidMove(board, player, row, col) {
+            if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE || board[row][col]) {
+                return false;
+            }
+            const opponent = player === BLACK ? WHITE : BLACK;
+            const directions = [
+                { row: 0, col: 1 },
+                { row: 0, col: -1 },
+                { row: 1, col: 0 },
+                { row: -1, col: 0 },
+                { row: 1, col: 1 },
+                { row: 1, col: -1 },
+                { row: -1, col: 1 },
+                { row: -1, col: -1 },
+            ];
+            let canFlip = false;
+            for (const dir of directions) {
+                let r = row + dir.row;
+                let c = col + dir.col;
+                let flippedInDirection = false;
+                while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === opponent) {
+                    r += dir.row;
+                    c += dir.col;
+                    flippedInDirection = true;
+                }
+                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === player && flippedInDirection) {
+                    canFlip = true;
+                    break;
+                }
+            }
+            return canFlip;
+        }
+
+        function getValidMoves(board, player) {
+            const validMoves = [];
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if (isValidMove(board, player, row, col)) {
+                        validMoves.push({ row, col });
+                    }
+                }
+            }
+            return validMoves;
+        }
+
+        function flipPieces(board, player, row, col) {
+            const opponent = player === BLACK ? WHITE : BLACK;
+            const directions = [
+                { row: 0, col: 1 },
+                { row: 0, col: -1 },
+                { row: 1, col: 0 },
+                { row: -1, col: 0 },
+                { row: 1, col: 1 },
+                { row: 1, col: -1 },
+                { row: -1, col: 1 },
+                { row: -1, col: -1 },
+            ];
+            const piecesToFlip = [];
+            for (const dir of directions) {
+                const tempFlip = [];
+                let r = row + dir.row;
+                let c = col + dir.col;
+                while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === opponent) {
+                    tempFlip.push({ row: r, col: c });
+                    r += dir.row;
+                    c += dir.col;
+                }
+                if (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_SIZE && board[r][c] === player) {
+                    piecesToFlip.push(...tempFlip);
+                }
+            }
+            for (const piece of piecesToFlip) {
+                board[piece.row][piece.col] = player;
+            }
+        }
+
+        function getScore(board) {
+            let blackScore = 0;
+            let whiteScore = 0;
+            for (let row = 0; row < BOARD_SIZE; row++) {
+                for (let col = 0; col < BOARD_SIZE; col++) {
+                    if (board[row][col] === BLACK) {
+                        blackScore++;
+                    } else if (board[row][col] === WHITE) {
+                        whiteScore++;
+                    }
+                }
+            }
+            return { black: blackScore, white: whiteScore };
+        }
+
+        function hasValidMoves(board, player) {
+            return getValidMoves(board, player).length > 0;
+        }
+
+        function getWinner(board) {
+            const { black, white } = getScore(board);
+            if (black > white) {
+                return BLACK;
+            } else if (white > black) {
+                return WHITE;
+            } else {
+                return null; // Tie
+            }
+        }
+
+        function updateMessageBox() {
+            let message = '';
+            if (!gameOver) {
+                message = `Current Player: ${currentPlayer === BLACK ? 'Black' : 'White'}`;
+            } else {
+                const winner = getWinner(board);
+                message = winner ? `${winner === BLACK ? 'Black' : 'White'} wins!` : "It's a Tie!";
+            }
+            messageBox.textContent = message;
+        }
+
+
+
+        function handleMove(row, col) {
+            if (gameOver || (gameMode === 2 && currentPlayer === WHITE)) return;
+
+            if (isValidMove(board, currentPlayer, row, col)) {
+                board[row][col] = currentPlayer;
+                flipPieces(board, currentPlayer, row, col);
+                moveMade = true;
+                currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
+                renderBoard(); // Re-render after player move
+
+                if (!hasValidMoves(board, currentPlayer)) {
+                    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK; // Switch back to opponent
+                    if (!hasValidMoves(board, currentPlayer)) {
+                        gameOver = true;
+                        renderBoard();
+                        showGameOverScreen(); // Show Game Over Screen
+                        return;
+                    }
+                    updateMessageBox(`No valid moves for ${currentPlayer === BLACK ? 'Black' : 'White'}. Skipping turn.`);
+                }
+
+                if (gameMode === 2 && currentPlayer === WHITE) {
+                    setTimeout(botMove, 500); // Delay bot move
+                }
+            }
+        }
+
+        function botMove() {
+            if (gameOver) return;
+
+            const bestMove = getBestMove(board, WHITE, botDifficulty);
+            if (bestMove) {
+                const { row, col } = bestMove;
+                board[row][col] = WHITE;
+                flipPieces(board, WHITE, row, col);
+                moveMade = true;
+                currentPlayer = BLACK;
+                renderBoard();
+
+                if (!hasValidMoves(board, currentPlayer)) {
+                    currentPlayer = WHITE;
+                    if (!hasValidMoves(board, currentPlayer)) {
+                        gameOver = true;
+                        renderBoard();
+                        showGameOverScreen();
+                        return;
+                    }
+                    updateMessageBox(`No valid moves for ${currentPlayer === BLACK ? 'Black' : 'White'}. Skipping turn.`);
+                }
+            }
+        }
+
+        function getBestMove(board, player, difficulty) {
+            const validMoves = getValidMoves(board, player);
+            if (!validMoves || validMoves.length === 0) {
+                return null;
+            }
+
+            let bestMove = null;
+            let bestScore = player === BLACK ? -Infinity : Infinity;
+
+            for (const move of validMoves) {
+                const tempBoard = board.map(row => [...row]);
+                const { row, col } = move;
+                tempBoard[row][col] = player;
+                flipPieces(tempBoard, player, row, col);
+                const score = evaluateBoard(tempBoard, player, difficulty);
+
+                if (player === BLACK) {
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                } else {
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+            }
+            return bestMove;
+        }
+
+        function evaluateBoard(board, player, difficulty) {
+            const opponent = player === BLACK ? WHITE : BLACK;
+            const { black, white } = getScore(board);
+            let score = 0;
+
+            // Prioritize corners
+            const corners = [{ row: 0, col: 0 }, { row: 0, col: 7 }, { row: 7, col: 0 }, { row: 7, col: 7 }];
+            for (const corner of corners) {
+                if (board[corner.row][corner.col] === player) {
+                    score += 50;
+                } else if (board[corner.row][corner.col] === opponent) {
+                    score -= 50;
+                }
+            }
+
+            // Disc difference
+            if (difficulty === 1) { // Easy
+                score += (black - white) * 10;
+            } else if (difficulty === 2) { // Medium
+                score += (black - white) * 20;
+            } else if (difficulty === 3) { // Hard
+                score += (black - white) * 100;
+            }
+
+             // Mobility
+            const blackMoves = getValidMoves(board, BLACK).length;
+            const whiteMoves = getValidMoves(board, WHITE).length;
+            if (difficulty === 1) { // Easy
+                score += (blackMoves - whiteMoves) * 5;
+            } else if (difficulty === 2) { // Medium
+                score += (blackMoves - whiteMoves) * 10;
+            } else if (difficulty === 3) { // Hard
+                score += (blackMoves - whiteMoves) * 50;
+            }
+
+            return score;
+        }
+
+
+
+        function resetGame() {
+            board = initializeBoard();
+            gameOver = false;
+            currentPlayer = BLACK;
+            moveMade = false;
+            renderBoard();
+            pvpButton.classList.remove('selected');
+            pvbButton.classList.remove('selected');
+            difficultyButtonsContainer.style.display = 'none';
+            gameMode = 1;
+            botDifficulty = 2;
+            selectedDifficultyButton.classList.remove('selected');
+            selectedDifficultyButton = document.querySelector('[data-difficulty="2"]');
+            selectedDifficultyButton.classList.add('selected');
+        }
+
+
+        function showGameOverScreen() {
+            const gameOverOverlay = document.createElement('div');
+            gameOverOverlay.classList.add('game-over-overlay');
+
+            const gameOverContent = document.createElement('div');
+            gameOverContent.classList.add('game-over-content');
+
+            const winnerText = document.createElement('p');
+            winnerText.classList.add('game-over-winner');
+            const winner = getWinner(board);
+            winnerText.textContent = winner ? `${winner === BLACK ? 'Black' : 'White'} wins!` : "It's a Tie!";
+
+            const newGameButton = document.createElement('button');
+            newGameButton.classList.add('button');
+            newGameButton.textContent = 'New Game';
+            newGameButton.addEventListener('click', () => {
+                resetGame();
+                gameOverOverlay.remove();
+            });
+
+            gameOverContent.appendChild(winnerText);
+            gameOverContent.appendChild(newGameButton);
+            gameOverOverlay.appendChild(gameOverContent);
+            document.body.appendChild(gameOverOverlay);
+        }
+
+        resetButton.addEventListener('click', resetGame);
+        pvpButton.addEventListener('click', () => {
+            gameMode = 1;
+            pvpButton.classList.add('selected');
+            pvbButton.classList.remove('selected');
+            difficultyButtonsContainer.style.display = 'none';
+            resetGame();
+
+        });
+        pvbButton.addEventListener('click', () => {
+            gameMode = 2;
+            pvbButton.classList.add('selected');
+            pvpButton.classList.remove('selected');
+            difficultyButtonsContainer.style.display = 'flex';
+            resetGame();
+        });
+
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                botDifficulty = parseInt(button.dataset.difficulty);
+                selectedDifficultyButton.classList.remove('selected');
+                button.classList.add('selected');
+                selectedDifficultyButton = button;
+            });
+        });
+
+        renderBoard();
+    </script>
+</body>
+</html>
