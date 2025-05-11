@@ -254,7 +254,15 @@
             gameModeSelection.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            resetGame();
+            initializeBoard(); // Initialize the board state
+            createBoard();      // Create the HTML elements for the board
+            updateTurnDisplay();
+            updateScoreDisplay();
+            possibleMoves = getPossibleMoves(currentPlayer);
+            updateBoardDisplay(); // Highlight initial possible moves
+            if (gameMode === 'pvc' && currentPlayer === 'white') {
+                setTimeout(computerMove, 500); // Let computer make the first move if white
+            }
         }
 
         function initializeBoard() {
@@ -426,7 +434,7 @@
                     updateBoardDisplay();
                     alert(`${currentPlayer === 'black' ? 'Black' : 'White'} has no moves and skips their turn.`);
                     if (gameMode === 'pvc' && currentPlayer === 'white') {
-                        setTimeout(computerMove, 1000);
+                        setTimeout(computerMove, 500);
                     }
                     return;
                 }
@@ -437,7 +445,7 @@
             updateBoardDisplay();
 
             if (gameMode === 'pvc' && currentPlayer === 'white') {
-                setTimeout(computerMove, 1000);
+                setTimeout(computerMove, 500);
             }
         }
 
@@ -445,16 +453,4 @@
             let blackCount = 0;
             let whiteCount = 0;
             for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 8; j++) {
-                    if (board[i][j] === 'black') blackCount++;
-                    else if (board[i][j] === 'white') whiteCount++;
-                }
-            }
-
-            let winner = '';
-            if (blackCount > whiteCount) {
-                winner = 'Black wins!';
-            } else if (whiteCount > blackCount) {
-                winner = 'White wins!';
-            } else {
-                winner = 'It\'
+                for (let
