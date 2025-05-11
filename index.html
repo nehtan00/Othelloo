@@ -254,22 +254,20 @@
             gameModeSelection.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            initializeBoard();
-            createBoard();
-            updateTurnDisplay();
-            updateScoreDisplay();
-            possibleMoves = getPossibleMoves(currentPlayer);
-            updateBoardDisplay();
-            if (gameMode === 'pvc' && currentPlayer === 'white') {
-                setTimeout(computerMove, 500);
-            }
+            resetGame(); // Initialize everything when the game starts
         }
 
         function initializeBoard() {
+            board = Array(8).fill(null).map(() => Array(8).fill(null));
             board[3][3] = 'white';
             board[4][4] = 'white';
             board[3][4] = 'black';
             board[4][3] = 'black';
+            currentPlayer = 'black';
+            possibleMoves = getPossibleMoves(currentPlayer);
+            updateTurnDisplay();
+            updateScoreDisplay();
+            updateBoardDisplay();
         }
 
         function createBoard() {
@@ -413,45 +411,4 @@
             }
 
             const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-
-            board[row][col] = currentPlayer;
-            flipPieces(row, col, currentPlayer);
-            updateBoardDisplay();
-
-            currentPlayer = getOpponent(currentPlayer);
-            possibleMoves = getPossibleMoves(currentPlayer);
-
-            if (possibleMoves.length === 0) {
-                const opponentMoves = getPossibleMoves(currentPlayer);
-                if (opponentMoves.length === 0) {
-                    endGame();
-                    return;
-                } else {
-                    currentPlayer = getOpponent(currentPlayer);
-                    possibleMoves = getPossibleMoves(currentPlayer);
-                    updateTurnDisplay();
-                    updateBoardDisplay();
-                    alert(`${currentPlayer === 'black' ? 'Black' : 'White'} has no moves and skips their turn.`);
-                    if (gameMode === 'pvc' && currentPlayer === 'white') {
-                        setTimeout(computerMove, 500);
-                    }
-                    return;
-                }
-            }
-
-            updateTurnDisplay();
-            updateScoreDisplay();
-            updateBoardDisplay();
-
-            if (gameMode === 'pvc' && currentPlayer === 'white') {
-                setTimeout(computerMove, 500);
-            }
-        }
-
-        function endGame() {
-            let blackCount = 0;
-            let whiteCount = 0;
-            for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 8; j++) {
-                    if (board[i][j] === 'black
+            const col
