@@ -391,6 +391,7 @@
         let currentGameId = null; // The ID of the current multiplayer game
         let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
 
+
         // --- Firebase Anonymous Authentication and UI state management ---
         // This block must be within the module script to access `auth`
         onAuthStateChanged(auth, (user) => {
@@ -433,6 +434,10 @@
             console.log("createFirebaseGame: Attempting to create document for gameId:", gameId, "by UID:", player1Uid);
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             const initialBoard = Array(8).fill(null).map(() => Array(8).fill(null));
+
+            // !!! FIX: Convert 2D array to JSON string for Firestore storage !!!
+            const initialBoardString = JSON.stringify(initialBoard);
+
             initialBoard[3][3] = 'white';
             initialBoard[4][4] = 'white';
             initialBoard[3][4] = 'black';
@@ -441,7 +446,7 @@
             const gameData = {
                 gameId: gameId,
                 players: [{uid: player1Uid, color: 'black'}], // Creator is Player 1 (Black)
-                board: initialBoard,
+                board: JSON.stringify(initialBoard), // Store as JSON string
                 currentPlayer: 'black',
                 status: 'waiting', // 'waiting', 'playing', 'finished'
                 lastMoveTimestamp: Date.now()
@@ -492,8 +497,9 @@
             console.log("updateFirebaseBoard: Updating gameId:", gameId, "to status:", newStatus);
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             try {
+                // !!! FIX: Convert 2D array to JSON string for Firestore storage !!!
                 await updateDoc(gameRef, {
-                    board: newBoard,
+                    board: JSON.stringify(newBoard), // Store as JSON string
                     currentPlayer: nextPlayer,
                     status: newStatus,
                     lastMoveTimestamp: Date.now()
@@ -515,8 +521,8 @@
                 } else {
                     console.error("listenToFirebaseGame: Game document no longer exists for gameId:", gameId);
                     alert("The game you were in no longer exists. Returning to lobby.");
-                    window.closeWinnerModal(); // Call global function
-                    window.showMultiplayerLobby(); // Call global function
+                    window.closeWinnerModal();
+                    window.showMultiplayerLobby();
                 }
             }, (error) => {
                 console.error("listenToFirebaseGame: Error listening to game:", error);
@@ -554,7 +560,7 @@
             initialSetup.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             multiplayerLobby.classList.remove('hidden');
-            window.refreshAvailableGames(); // Call global function
+            window.refreshAvailableGames();
         };
 
         window.startGame = function(mode, difficulty = null) {
@@ -564,14 +570,14 @@
             multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            window.resetGame(); // Call global function
+            window.resetGame();
         };
 
         window.closeWinnerModal = function() {
             winnerModal.style.display = 'none';
             gameContainer.classList.add('hidden');
             if (gameMode === 'multiplayer') {
-                window.showMultiplayerLobby(); // Call global function
+                window.showMultiplayerLobby();
             } else {
                 initialSetup.classList.remove('hidden');
             }
@@ -599,7 +605,7 @@
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
                 unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                    loadGameFromFirebase(gameData);
+                    loadGameFromFirebase(gameData); // The board here will be a string, parsed inside loadGameFromFirebase
 
                     if (gameData.status === 'playing' && gameData.players.length === 2) {
                         multiplayerLobby.classList.add('hidden');
@@ -639,7 +645,7 @@
                     currentGameId = gameId;
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData);
+                        loadGameFromFirebase(gameData); // The board here will be a string, parsed inside loadGameFromFirebase
                         if (gameData.status === 'finished') {
                             endGame();
                         }
@@ -674,7 +680,7 @@
                     currentGameId = gameId;
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData);
+                        loadGameFromFirebase(gameData); // The board here will be a string, parsed inside loadGameFromFirebase
                         if (gameData.status === 'finished') {
                             endGame();
                         }
@@ -710,7 +716,7 @@
                     button.textContent = gameId;
                     button.onclick = () => {
                         gameIdInput.value = gameId;
-                        window.joinGame(); // Call global function
+                        window.joinGame();
                     };
                     availableGamesDiv.appendChild(button);
                 });
@@ -729,7 +735,7 @@
             gameContainer.classList.add('hidden');
             currentGameInfo.classList.add('hidden');
             gameIdInput.value = '';
-            window.showMultiplayerLobby(); // Call global function
+            window.showMultiplayerLobby();
         };
 
         window.copyGameLink = function() {
@@ -744,7 +750,8 @@
         // This function updates the local game state (board, current player etc.)
         // based on the data received from Firebase.
         function loadGameFromFirebase(gameData) {
-            board = gameData.board;
+            // !!! FIX: Parse the board from JSON string back to 2D array !!!
+            board = JSON.parse(gameData.board);
             currentPlayer = gameData.currentPlayer;
             if (gameData.players && gameData.players.length > 0 && auth.currentUser?.uid) {
                 const selfPlayer = gameData.players.find(p => p.uid === auth.currentUser.uid);
@@ -963,7 +970,7 @@
                 if (gameMode === 'multiplayer' && currentGameId) {
                      await updateFirebaseBoard(currentGameId, board, currentPlayer, 'finished');
                 } else {
-                     window.endGame(); // Call global function
+                     window.endGame();
                 }
             } else {
                 updateBoardDisplay();
@@ -1004,7 +1011,7 @@
 
             winnerMessage.textContent = winnerMessageText;
             finalScoresElement.textContent = `Black: ${blackCount}, White: ${whiteCount}`;
-            window.showWinnerModal(); // Call global function
+            window.showWinnerModal();
         };
 
         window.showWinnerModal = function() {
