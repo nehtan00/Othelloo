@@ -392,6 +392,9 @@
         let currentGameId = null; // The ID of the current multiplayer game
         let unsubscribeFromGame = null; // Function to unsubscribe from Firestore listener
 
+        // Flag to ensure board HTML is rendered only once
+        let boardHtmlRendered = false;
+
 
         // --- Firebase Anonymous Authentication and UI state management ---
         onAuthStateChanged(auth, (user) => {
@@ -570,14 +573,14 @@
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
 
-            // For multiplayer, create the board HTML immediately but don't initialize data yet.
-            // Data will come from Firebase listener.
-            createBoard(); // Only create HTML elements for the board once
+            // Ensure board HTML layout is rendered when any game mode starts
+            renderBoardHtmlLayout();
 
             if (gameMode === 'pvp' || gameMode === 'pvc') {
-                window.resetGame(); // Reset game logic for single-player/PvP immediately
+                window.resetGame(); // Initialize game state for single-player/PvP
             } else { // Multiplayer
-                // Initialize game ID display in game screen
+                // Game ID is displayed on the game screen.
+                // The board data will be loaded via the Firebase listener in loadGameFromFirebase.
                 gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
             }
         };
@@ -625,8 +628,7 @@
                     }
                 });
                 currentGameInfo.classList.remove('hidden');
-                // When creating a game, immediately transition to the game view (it will be in 'waiting' state initially)
-                window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
+                window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
             } catch (error) {
                 console.error("Error creating game:", error);
                 alert(`Failed to create game: ${error.message}. Please check console for details and Firebase rules.`);
@@ -665,7 +667,7 @@
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
                     currentGameInfo.classList.remove('hidden');
-                    window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
+                    window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
                 }
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -699,7 +701,7 @@
                         }
                     });
                     currentGameInfo.classList.remove('hidden');
-                    window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
+                    window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
                 } else {
                     initialSetup.classList.remove('hidden');
                 }
@@ -757,7 +759,7 @@
             if (unsubscribeFromGame) {
                 unsubscribeFromGame(); // Stop listening to this game
             }
-            // You could also update the Firebase game status here (e.g., 'abandoned') if you want to
+            // Consider updating the Firebase game status here (e.g., 'abandoned') if you want to
             // mark the game as no longer active in Firestore. For simplicity, we're just leaving locally.
 
             currentGameId = null; // Clear current game ID
@@ -789,7 +791,7 @@
                 }
             }
             possibleMoves = getPossibleMoves(currentPlayer);
-            updateBoardDisplay();
+            updateBoardDisplay(); // Update pieces on the already rendered HTML board
             updateTurnDisplay();
             updateScoreDisplay();
             // Ensure game ID is displayed on the game screen
@@ -798,11 +800,13 @@
             } else {
                 gameDisplayIdInGame.textContent = 'N/A'; // For single player, or if gameId isn't set yet
             }
+            console.log("Game data loaded from Firebase and display updated."); // Debug
         }
 
 
         // --- Board Management Functions ---
         function initializeBoard() {
+            // Reset the internal board array and current player for single-player/PvP
             board = Array(8).fill(null).map(() => Array(8).fill(null));
             board[3][3] = 'white';
             board[4][4] = 'white';
@@ -811,37 +815,34 @@
             currentPlayer = 'black';
         }
 
-        function createBoard() {
-            // This function creates the HTML structure of the board.
-            // It should be called once when the gameContainer is made visible.
-            boardElement.innerHTML = '';
-            for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 8; j++) {
-                    const cell = document.createElement('div');
-                    cell.classList.add('cell');
-                    cell.dataset.row = i;
-                    cell.dataset.col = j;
-                    cell.addEventListener('click', window.handleMove); // Call global function
-                    const piece = board[i][j]; // Use current local board state to initially populate
-                    if (piece) {
-                        const pieceElement = document.createElement('div');
-                        pieceElement.classList.add('piece', piece);
-                        cell.appendChild(pieceElement);
+        // Function to render the empty Othello grid HTML layout (called only once)
+        function renderBoardHtmlLayout() {
+            if (!boardHtmlRendered) {
+                boardElement.innerHTML = ''; // Clear any existing HTML
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
+                        const cell = document.createElement('div');
+                        cell.classList.add('cell');
+                        cell.dataset.row = i;
+                        cell.dataset.col = j;
+                        cell.addEventListener('click', window.handleMove); // Attach event listener
+                        boardElement.appendChild(cell);
                     }
-                    boardElement.appendChild(cell);
                 }
+                boardHtmlRendered = true;
+                console.log("Board HTML layout rendered for the first time."); // Debug
             }
         }
 
+        // This function updates the visual representation of the pieces on the existing HTML board.
         function updateBoardDisplay() {
-            // This function updates the visual representation of the pieces on the existing HTML board.
             const cells = boardElement.querySelectorAll('.cell');
             cells.forEach(cell => {
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-                cell.innerHTML = ''; // Clear current piece
+                cell.innerHTML = ''; // Clear current piece (just the piece, not the cell HTML)
 
-                const piece = board[row][col];
+                const piece = board[row][col]; // Use the global `board` state
                 if (piece) {
                     const pieceElement = document.createElement('div');
                     pieceElement.classList.add('piece', piece);
@@ -858,6 +859,7 @@
                     }
                 }
             });
+            console.log("Board pieces display updated."); // Debug
         }
 
         function updateTurnDisplay() {
@@ -1056,18 +1058,17 @@
         };
 
         window.resetGame = function() {
-            // This reset is for single player or PvP.
-            // Multiplayer games are reset by leaving and creating/joining a new one.
             if (gameMode === 'multiplayer') {
                 alert("To reset a multiplayer game, please leave the current game from the lobby and create/join a new one.");
                 return;
             }
             initializeBoard();
-            createBoard(); // Recreate HTML elements
+            renderBoardHtmlLayout(); // Ensure HTML is created for single player
+            updateBoardDisplay(); // Populate with initial pieces
             updateTurnDisplay();
             updateScoreDisplay();
             possibleMoves = getPossibleMoves(currentPlayer);
-            updateBoardDisplay();
+            updateBoardDisplay(); // Re-highlight possible moves
             if (gameMode === 'pvc' && currentPlayer === 'white') {
                 setTimeout(computerMove, getComputerDelay());
             }
@@ -1234,4 +1235,3 @@
     </script>
 </body>
 </html>
-
