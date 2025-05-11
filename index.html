@@ -10,35 +10,47 @@
     <style>
         body {
             font-family: 'Google Sans', sans-serif;
-            background-color: #f0e6d2;
+            background-color: #f0e6d2; /* Light earthy background */
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            flex-direction: column;
+            flex-direction: column; /* Stack the selection and game */
         }
 
         .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
             left: 0;
             top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center; /* Center horizontally */
+            align-items: center;   /* Center vertically */
         }
 
         .modal-content {
             background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
+            margin: auto; /* Center horizontally and vertically */
+            padding: 30px;
             border: 1px solid #888;
-            width: 80%;
+            width: 60%; /* Responsive width */
+            max-width: 400px; /* Max width for larger screens */
             border-radius: 8px;
             text-align: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            color: #5e503f; /* Earthy text color */
+            font-size: 1.2em;
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #333;
+            font-weight: 700;
         }
 
         .close-button {
@@ -46,6 +58,7 @@
             float: right;
             font-size: 28px;
             font-weight: bold;
+            cursor: pointer;
         }
 
         .close-button:hover,
@@ -56,7 +69,7 @@
         }
 
         .selection-container {
-            background-color: #a08e79;
+            background-color: #a08e79; /* Medium earthy tone */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 30px;
@@ -65,25 +78,30 @@
         }
 
         .selection-container h2 {
-            color: #5e503f;
+            color: #5e503f; /* Earthy text color */
             margin-bottom: 15px;
         }
 
-        .selection-container button, .difficulty-container button {
+        .selection-container button, .difficulty-container button, .info button {
             font-family: 'Google Sans', sans-serif;
-            background-color: #c6b8a9;
-            color: #5e503f;
+            background-color: #c6b8a9; /* Lighter earthy tone */
+            color: #5e503f; /* Earthy text color */
             border: none;
             padding: 12px 24px;
             border-radius: 6px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.2s ease-in-out;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
             margin: 5px;
+            outline: none; /* Remove outline on focus */
         }
 
-        .selection-container button:hover, .difficulty-container button:hover {
-            background-color: #b0a194;
+        .selection-container button:hover, .difficulty-container button:hover, .info button:hover {
+            background-color: #b0a194; /* Slightly darker hover */
+            transform: translateY(-2px); /* Subtle lift on hover */
+        }
+        .selection-container button:active, .difficulty-container button:active, .info button:active {
+            transform: translateY(0); /* Press down on click */
         }
 
         .difficulty-container {
@@ -112,12 +130,12 @@
             grid-template-columns: repeat(8, 60px);
             grid-template-rows: repeat(8, 60px);
             gap: 4px;
-            background-color: #776e65;
+            background-color: #776e65; /* Darker earthy tone for grid lines */
             border-radius: 4px;
         }
 
         .cell {
-            background-color: #c6b8a9;
+            background-color: #c6b8a9; /* Lighter earthy tone for cells */
             width: 60px;
             height: 60px;
             border-radius: 4px;
@@ -149,7 +167,7 @@
         }
 
         .cell.possible-move {
-            background-color: #b0a194;
+            background-color: #b0a194; /* Slightly darker hover for possible moves */
         }
 
         .cell.possible-move::before {
@@ -158,38 +176,23 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background-color: rgba(51, 51, 51, 0.6);
+            background-color: rgba(51, 51, 51, 0.6); /* Indicate possible black move */
+            transition: background-color 0.2s ease-in-out;
         }
 
         .cell.possible-move.white::before {
-            background-color: rgba(249, 249, 249, 0.6);
+            background-color: rgba(249, 249, 249, 0.6); /* Indicate possible white move */
             border: 1px solid rgba(204, 204, 204, 0.6);
         }
 
         .info {
             margin-top: 20px;
             text-align: center;
-            color: #5e503f;
+            color: #5e503f; /* Earthy text color */
         }
 
         .info p {
             margin: 5px 0;
-        }
-
-        .info button {
-            font-family: 'Google Sans', sans-serif;
-            background-color: #c6b8a9;
-            color: #5e503f;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.2s ease-in-out;
-        }
-
-        .info button:hover {
-            background-color: #b0a194;
         }
 
         .hidden {
@@ -202,6 +205,8 @@
         <div class="modal-content">
             <span class="close-button" onclick="closeWinnerModal()">&times;</span>
             <p id="winner-message"></p>
+            <h3>Final Scores:</h3>
+            <p id="final-scores"></p>
         </div>
     </div>
 
@@ -220,10 +225,10 @@
 
     <div class="container hidden" id="game-container">
         <div class="board" id="othello-board">
-        </div>
+            </div>
         <div class="info">
-            <p id="turn"></p>
-            <p id="score"></p>
+            <p id="turn">Black's Turn</p>
+            <p id="score">Black: 2, White: 2</p>
             <button onclick="resetGame()">Reset Game</button>
         </div>
     </div>
@@ -237,48 +242,56 @@
         const scoreElement = document.getElementById('score');
         const winnerModal = document.getElementById('winner-modal');
         const winnerMessage = document.getElementById('winner-message');
+        const finalScoresElement = document.getElementById('final-scores');
+
         let board = Array(8).fill(null).map(() => Array(8).fill(null));
         let currentPlayer = 'black';
         let possibleMoves = [];
-        let gameMode = null;
-        let computerDifficulty = null;
+        let gameMode = null; // 'pvp' or 'pvc'
+        let computerDifficulty = null; // 'easy', 'medium', 'hard'
 
+        // --- UI Control Functions ---
         function showDifficultySelection() {
             gameModeSelection.classList.add('hidden');
             difficultySelection.classList.remove('hidden');
         }
 
-        function startGame(mode, difficulty) {
+        function startGame(mode, difficulty = null) {
             gameMode = mode;
             computerDifficulty = difficulty;
             gameModeSelection.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            resetGame(); // Initialize everything when the game starts
+            resetGame(); // Call resetGame to initialize and display the board
         }
 
+        function closeWinnerModal() {
+            winnerModal.style.display = 'none';
+            // Return to game mode selection after closing modal
+            gameContainer.classList.add('hidden');
+            gameModeSelection.classList.remove('hidden');
+        }
+
+        // --- Board Management Functions ---
         function initializeBoard() {
+            // Reset the board to its initial state
             board = Array(8).fill(null).map(() => Array(8).fill(null));
             board[3][3] = 'white';
             board[4][4] = 'white';
             board[3][4] = 'black';
             board[4][3] = 'black';
-            currentPlayer = 'black';
-            possibleMoves = getPossibleMoves(currentPlayer);
-            updateTurnDisplay();
-            updateScoreDisplay();
-            updateBoardDisplay();
+            currentPlayer = 'black'; // Black always starts
         }
 
         function createBoard() {
-            boardElement.innerHTML = '';
+            boardElement.innerHTML = ''; // Clear existing cells
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
                     const cell = document.createElement('div');
                     cell.classList.add('cell');
                     cell.dataset.row = i;
                     cell.dataset.col = j;
-                    cell.addEventListener('click', handleMove);
+                    cell.addEventListener('click', handleMove); // Add event listener to each cell
 
                     const piece = board[i][j];
                     if (piece) {
@@ -296,7 +309,7 @@
             cells.forEach(cell => {
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-                cell.innerHTML = '';
+                cell.innerHTML = ''; // Clear current piece
 
                 const piece = board[row][col];
                 if (piece) {
@@ -304,11 +317,12 @@
                     pieceElement.classList.add('piece', piece);
                     cell.appendChild(pieceElement);
                 }
+                // Remove and re-add possible-move class for correct highlighting
                 cell.classList.remove('possible-move', 'white');
                 if (possibleMoves.some(move => move.row === row && move.col === col)) {
                     cell.classList.add('possible-move');
                     if (currentPlayer === 'white') {
-                        cell.classList.add('white');
+                        cell.classList.add('white'); // Apply white indicator for white's possible moves
                     }
                 }
             });
@@ -330,19 +344,21 @@
             scoreElement.textContent = `Black: ${blackCount}, White: ${whiteCount}`;
         }
 
+        // --- Game Logic Functions ---
         function getOpponent(player) {
             return player === 'black' ? 'white' : 'black';
         }
 
-        function isValidMove(row, col, player) {
-            if (row < 0 || row > 7 || col < 0 || col > 7 || board[row][col]) {
+        function isValidMove(row, col, player, currentBoard) {
+            // Check if the cell is within bounds and empty
+            if (row < 0 || row > 7 || col < 0 || col > 7 || currentBoard[row][col]) {
                 return false;
             }
 
             const opponent = getOpponent(player);
             const directions = [
-                [-1, 0], [1, 0], [0, -1], [0, 1],
-                [-1, -1], [-1, 1], [1, -1], [1, 1]
+                [-1, 0], [1, 0], [0, -1], [0, 1], // Horizontal and Vertical
+                [-1, -1], [-1, 1], [1, -1], [1, 1]  // Diagonal
             ];
 
             for (const [dr, dc] of directions) {
@@ -350,25 +366,27 @@
                 let c = col + dc;
                 let foundOpponent = false;
 
-                while (r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === opponent) {
+                // Traverse in this direction as long as we find opponent's pieces
+                while (r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === opponent) {
                     foundOpponent = true;
                     r += dr;
                     c += dc;
                 }
 
-                if (foundOpponent && r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === player) {
-                    return true;
+                // If we found opponent pieces and then landed on one of our own, it's a valid flip direction
+                if (foundOpponent && r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === player) {
+                    return true; // At least one direction allows a flip
                 }
             }
 
             return false;
         }
 
-        function getPossibleMoves(player) {
+        function getPossibleMoves(player, currentBoard = board) {
             const moves = [];
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
-                    if (isValidMove(i, j, player)) {
+                    if (isValidMove(i, j, player, currentBoard)) {
                         moves.push({ row: i, col: j });
                     }
                 }
@@ -376,39 +394,318 @@
             return moves;
         }
 
-        function flipPieces(row, col, player) {
+        function flipPieces(row, col, player, currentBoard) {
             const opponent = getOpponent(player);
             const directions = [
                 [-1, 0], [1, 0], [0, -1], [0, 1],
                 [-1, -1], [-1, 1], [1, -1], [1, 1]
             ];
 
+            let piecesFlipped = 0; // Counter for AI heuristic
+
             for (const [dr, dc] of directions) {
                 let r = row + dr;
                 let c = col + dc;
-                const piecesToFlip = [];
+                const piecesToFlipInDirection = [];
                 let foundOpponent = false;
 
-                while (r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === opponent) {
+                while (r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === opponent) {
                     foundOpponent = true;
-                    piecesToFlip.push({ row: r, col: c });
+                    piecesToFlipInDirection.push({ row: r, col: c });
                     r += dr;
                     c += dc;
                 }
 
-                if (foundOpponent && r >= 0 && r < 8 && c >= 0 && c < 8 && board[r][c] === player) {
-                    piecesToFlip.forEach(p => {
-                        board[p.row][p.col] = player;
+                if (foundOpponent && r >= 0 && r < 8 && c >= 0 && c < 8 && currentBoard[r][c] === player) {
+                    piecesToFlipInDirection.forEach(p => {
+                        currentBoard[p.row][p.col] = player;
+                        piecesFlipped++;
                     });
+                }
+            }
+            return piecesFlipped;
+        }
+
+        // --- Main Game Flow Handler ---
+        function handleMove(event) {
+            const cell = event.target.closest('.cell');
+            if (!cell || !cell.classList.contains('possible-move')) {
+                return; // Not a valid or highlighted move
+            }
+
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            // Place the current player's piece
+            board[row][col] = currentPlayer;
+            // Flip the opponent's pieces
+            flipPieces(row, col, currentPlayer, board);
+
+            // Update UI immediately after player's move
+            updateBoardDisplay();
+            updateScoreDisplay();
+
+            // Switch to the next player
+            currentPlayer = getOpponent(currentPlayer);
+            possibleMoves = getPossibleMoves(currentPlayer);
+
+            // Check for game end or skips
+            if (possibleMoves.length === 0) {
+                const opponentHasMoves = getPossibleMoves(getOpponent(currentPlayer)).length > 0;
+                if (opponentHasMoves) {
+                    // Current player has no moves, but opponent does. Skip turn.
+                    alert(`${currentPlayer === 'black' ? 'Black' : 'White'} has no moves and skips their turn.`);
+                    currentPlayer = getOpponent(currentPlayer); // Switch back to opponent
+                    possibleMoves = getPossibleMoves(currentPlayer); // Get moves for the player who just got skipped to
+                    updateTurnDisplay();
+                    updateBoardDisplay();
+                    // If it's PVC mode and the AI just skipped, let the AI make a move
+                    if (gameMode === 'pvc' && currentPlayer === 'white') {
+                        setTimeout(computerMove, getComputerDelay());
+                    }
+                } else {
+                    // Neither player has moves, game over
+                    endGame();
+                    return;
+                }
+            } else {
+                // Valid move made, and next player has moves
+                updateTurnDisplay();
+                updateBoardDisplay(); // Re-highlight possible moves for the new player
+                // If it's PVC mode and it's the computer's turn, initiate AI move
+                if (gameMode === 'pvc' && currentPlayer === 'white') {
+                    setTimeout(computerMove, getComputerDelay());
                 }
             }
         }
 
-        function handleMove(event) {
-            const cell = event.target.closest('.cell');
-            if (!cell || !cell.classList.contains('possible-move')) {
+        // --- Game End and Reset Functions ---
+        function endGame() {
+            let blackCount = 0;
+            let whiteCount = 0;
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    if (board[i][j] === 'black') blackCount++;
+                    else if (board[i][j] === 'white') whiteCount++;
+                }
+            }
+
+            let winnerMessageText = '';
+            if (blackCount > whiteCount) {
+                winnerMessageText = 'Black wins!';
+            } else if (whiteCount > blackCount) {
+                winnerMessageText = 'White wins!';
+            } else {
+                winnerMessageText = 'It\'s a Draw!';
+            }
+
+            winnerMessage.textContent = winnerMessageText;
+            finalScoresElement.textContent = `Black: ${blackCount}, White: ${whiteCount}`;
+            showWinnerModal();
+        }
+
+        function showWinnerModal() {
+            winnerModal.style.display = 'flex'; // Use flex to center
+        }
+
+        function resetGame() {
+            initializeBoard();
+            createBoard(); // Recreate the board elements on reset
+            updateTurnDisplay();
+            updateScoreDisplay();
+            possibleMoves = getPossibleMoves(currentPlayer); // Calculate initial possible moves
+            updateBoardDisplay(); // Highlight initial moves
+            if (gameMode === 'pvc' && currentPlayer === 'white') {
+                setTimeout(computerMove, getComputerDelay());
+            }
+        }
+
+        // --- Computer AI Logic ---
+
+        // Simple heuristic to get the score for a given board state
+        function getScoreForBoard(currentBoard, player) {
+            let playerScore = 0;
+            let opponentScore = 0;
+            const opponent = getOpponent(player);
+
+            const WEIGHTS = [ // A simple board weighting for medium/hard AI
+                [100, -20, 10, 5, 5, 10, -20, 100],
+                [-20, -50, -2, -2, -2, -2, -50, -20],
+                [10, -2, 1, 1, 1, 1, -2, 10],
+                [5, -2, 1, 1, 1, 1, -2, 5],
+                [5, -2, 1, 1, 1, 1, -2, 5],
+                [10, -2, 1, 1, 1, 1, -2, 10],
+                [-20, -50, -2, -2, -2, -2, -50, -20],
+                [100, -20, 10, 5, 5, 10, -20, 100]
+            ];
+
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    if (currentBoard[i][j] === player) {
+                        playerScore += WEIGHTS[i][j];
+                    } else if (currentBoard[i][j] === opponent) {
+                        opponentScore += WEIGHTS[i][j];
+                    }
+                }
+            }
+            return playerScore - opponentScore;
+        }
+
+        // Helper to make a deep copy of the board
+        function getDeepCopy(boardArray) {
+            return boardArray.map(row => [...row]);
+        }
+
+        function getComputerDelay() {
+            switch (computerDifficulty) {
+                case 'easy': return 1500; // Slower, more noticeable AI turn
+                case 'medium': return 1000;
+                case 'hard': return 700; // Faster, more challenging AI
+                default: return 1000;
+            }
+        }
+
+        // AI Logic based on difficulty
+        function computerMove() {
+            if (gameMode !== 'pvc' || currentPlayer !== 'white') {
+                return; // Only computer plays if it's PVC mode and it's white's turn
+            }
+
+            const moves = getPossibleMoves('white');
+            if (moves.length === 0) {
+                // If no moves, this means a skip already occurred or the game is over.
+                // The handleMove logic already checks for skips and game end.
                 return;
             }
 
-            const row = parseInt(cell.dataset.row);
-            const col
+            let chosenMove = null;
+
+            switch (computerDifficulty) {
+                case 'easy':
+                    // Easy: Random move
+                    chosenMove = moves[Math.floor(Math.random() * moves.length)];
+                    break;
+                case 'medium':
+                    // Medium: Prioritize corners, then moves that flip the most pieces
+                    chosenMove = findBestMoveMedium(moves, 'white');
+                    break;
+                case 'hard':
+                    // Hard: Minimax with limited depth
+                    // Depth of 3 for example. Higher depth is more intelligent but slower.
+                    chosenMove = findBestMoveMinimax(board, 'white', 3).move;
+                    break;
+                default:
+                    chosenMove = moves[0]; // Fallback
+            }
+
+            if (chosenMove) {
+                // Simulate a click event on the chosen cell
+                // This is important to trigger the handleMove function and all its side effects
+                const cellElement = boardElement.querySelector(`[data-row="${chosenMove.row}"][data-col="${chosenMove.col}"]`);
+                if (cellElement) {
+                    cellElement.click();
+                }
+            }
+        }
+
+        function findBestMoveMedium(possibleMoves, player) {
+            let bestMove = null;
+            let maxFlipped = -1; // Track the maximum number of pieces flipped
+
+            const corners = [
+                {row: 0, col: 0}, {row: 0, col: 7},
+                {row: 7, col: 0}, {row: 7, col: 7}
+            ];
+
+            // First, check for corners - always prioritize them
+            for (const move of possibleMoves) {
+                if (corners.some(corner => corner.row === move.row && corner.col === move.col)) {
+                    return move; // Take the corner immediately
+                }
+            }
+
+            // If no corners, find the move that flips the most pieces
+            for (const move of possibleMoves) {
+                const tempBoard = getDeepCopy(board); // Create a temporary board to simulate the move
+                // Simulate placing the piece and flipping others
+                tempBoard[move.row][move.col] = player;
+                const flippedCount = flipPieces(move.row, move.col, player, tempBoard);
+
+                if (flippedCount > maxFlipped) {
+                    maxFlipped = flippedCount;
+                    bestMove = move;
+                }
+            }
+            return bestMove || possibleMoves[0]; // Fallback to the first available move if no pieces flipped (shouldn't happen with isValidMove)
+        }
+
+        // Minimax Algorithm (simplified for Othello)
+        function minimax(currentBoardState, depth, maximizingPlayer, player) {
+            const opponent = getOpponent(player);
+
+            // Base case: if depth is 0 or game is over
+            // A simple check for game over: no possible moves for either player
+            if (depth === 0 || (getPossibleMoves(player, currentBoardState).length === 0 && getPossibleMoves(opponent, currentBoardState).length === 0)) {
+                return { score: getScoreForBoard(currentBoardState, player) };
+            }
+
+            // Determine whose turn it is in the simulated game tree
+            const currentPlayerInMinimax = maximizingPlayer ? player : opponent;
+            const moves = getPossibleMoves(currentPlayerInMinimax, currentBoardState);
+
+            // If no moves for the current player in minimax, simulate a skip
+            if (moves.length === 0) {
+                // Recursively call minimax for the next player's turn with reduced depth
+                return minimax(currentBoardState, depth - 1, !maximizingPlayer, player);
+            }
+
+            if (maximizingPlayer) {
+                let bestScore = -Infinity;
+                let bestMove = null;
+
+                for (const move of moves) {
+                    const newBoard = getDeepCopy(currentBoardState);
+                    newBoard[move.row][move.col] = currentPlayerInMinimax;
+                    flipPieces(move.row, move.col, currentPlayerInMinimax, newBoard);
+
+                    const score = minimax(newBoard, depth - 1, false, player).score; // Recursively call for minimizing player
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+                return { score: bestScore, move: bestMove };
+            } else { // Minimizing player
+                let bestScore = Infinity;
+                let bestMove = null;
+
+                for (const move of moves) {
+                    const newBoard = getDeepCopy(currentBoardState);
+                    newBoard[move.row][move.col] = currentPlayerInMinimax;
+                    flipPieces(move.row, move.col, currentPlayerInMinimax, newBoard);
+
+                    const score = minimax(newBoard, depth - 1, true, player).score; // Recursively call for maximizing player
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestMove = move;
+                    }
+                }
+                return { score: bestScore, move: bestMove };
+            }
+        }
+
+        function findBestMoveMinimax(currentBoard, player, depth) {
+            // Initial call to minimax to find the best move for the 'player'
+            const result = minimax(currentBoard, depth, true, player);
+            return result; // Returns an object like {score: ..., move: {row: ..., col: ...}}
+        }
+
+
+        // --- Initial Setup (show game mode selection when page loads) ---
+        document.addEventListener('DOMContentLoaded', () => {
+            gameModeSelection.classList.remove('hidden');
+        });
+
+    </script>
+</body>
+</html>
