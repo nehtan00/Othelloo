@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Othello Game</title>
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <title>Othellooooo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cascadia+Code&family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         body {
             display: flex;
@@ -12,20 +12,22 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
-            background-color: #f0f0f0;
-            font-family: 'Press Start 2P', cursive;
+            background-color: #F1FFFA; /* Mint Cream */
+            font-family: 'Cascadia Code', monospace;
             margin: 0;
-              background: linear-gradient(135deg, #4a148c, #1a237e);
+            background: linear-gradient(135deg, #4a148c, #1a237e);
         }
+
         #board {
             display: grid;
             grid-template-columns: repeat(8, 80px);
             grid-template-rows: repeat(8, 80px);
-            border: 4px solid #1a237e;
-            background-color: #006400;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+            border: 4px solid #785964; /* Rose Taupe */
+            background-color: #006400; /* Dark Green from original*/
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
             margin-bottom: 20px;
         }
+
         .square {
             width: 80px;
             height: 80px;
@@ -34,117 +36,125 @@
             justify-content: center;
             font-size: 24px;
             cursor: pointer;
-             transition: background-color 0.2s; /* Smooth transition for hover effect */
+            transition: background-color 0.2s;
         }
-      .square:hover {
+
+        .square:hover {
             background-color: rgba(0, 100, 0, 0.8);
         }
+
         .black {
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            background-color: black;
+            background-color: #454545; /* Onyx - changed to default black*/
             border: 2px solid #222;
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
         }
+
         .white {
             width: 70px;
             height: 70px;
             border-radius: 50%;
-            background-color: white;
-             border: 2px solid #ddd;
-            box-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+            background-color: #F1FFFA; /* Mint Cream */
+            border: 2px solid #ddd;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
         }
+
         .possible {
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+            background-color: rgba(0, 0, 0, 0.5);
         }
+
         #controls {
             display: flex;
             flex-direction: column;
             align-items: center;
             margin-bottom: 20px;
         }
+
         .button {
             padding: 12px 24px;
             font-size: 16px;
             margin: 5px;
             cursor: pointer;
-            background: linear-gradient(to bottom, #4CAF50, #388E3C);
+            background-color: #93b7be; /* Light Blue */
             border: none;
-            color: white;
+            color: #F1FFFA; /* Mint Cream */
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
-            font-family: 'Press Start 2P', cursive;
+            font-family: 'Cascadia Code', monospace;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             width: 150px;
         }
+
         .button:hover {
-          background: linear-gradient(to bottom, #66BB6A, #43A047);
-          box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-          transform: translateY(-2px);
+            background-color: #a8c5cb;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+            transform: translateY(-2px);
         }
+
         .button:active {
-           background: linear-gradient(to bottom, #388E3C, #2E7D32);
-           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-           transform: translateY(0);
+            background-color: #699ba5;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transform: translateY(0);
         }
 
         #message-box {
             font-size: 18px;
-            color: white;
+            color: #F1FFFA;
             margin-bottom: 20px;
             min-height: 24px;
             text-align: center;
             padding: 10px;
-            border-radius: 8px; /* Rounded corners for the message box */
-            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Subtle shadow */
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             backdrop-filter: blur(4px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-       .selected {
-          border: 4px solid gold;
-          box-shadow: 0 0 10px gold;
+
+        .selected {
+            border: 4px solid gold;
+            box-shadow: 0 0 10px gold;
         }
 
         .game-over-overlay {
-          position: fixed;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background-color: rgba(0, 0, 0, 0.8);
-          z-index: 10;
+            position: fixed;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            z-index: 10;
         }
 
         .game-over-content {
-          background-color: #fff;
-          padding: 30px;
-          border-radius: 12px;
-          text-align: center;
-          box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
-          border: 4px solid #333;
+            background-color: #F1FFFA;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+            border: 4px solid #333;
         }
 
         .game-over-title {
-          font-size: 24px;
-          margin-bottom: 20px;
-          color: #222;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #222;
         }
 
         .game-over-winner {
-          font-size: 20px;
-          color: #e65100;
-          margin-bottom: 25px;
+            font-size: 20px;
+            color: #785964;
+            margin-bottom: 25px;
         }
-
     </style>
 </head>
 <body>
@@ -341,21 +351,21 @@
                 flipPieces(board, currentPlayer, row, col);
                 moveMade = true;
                 currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
-                renderBoard(); // Re-render after player move
+                renderBoard();
 
                 if (!hasValidMoves(board, currentPlayer)) {
-                    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK; // Switch back to opponent
+                    currentPlayer = currentPlayer === BLACK ? WHITE : BLACK;
                     if (!hasValidMoves(board, currentPlayer)) {
                         gameOver = true;
                         renderBoard();
-                        showGameOverScreen(); // Show Game Over Screen
+                        showGameOverScreen();
                         return;
                     }
                     updateMessageBox(`No valid moves for ${currentPlayer === BLACK ? 'Black' : 'White'}. Skipping turn.`);
                 }
 
                 if (gameMode === 2 && currentPlayer === WHITE) {
-                    setTimeout(botMove, 500); // Delay bot move
+                    setTimeout(botMove, 500);
                 }
             }
         }
@@ -440,7 +450,7 @@
                 score += (black - white) * 100;
             }
 
-             // Mobility
+            // Mobility
             const blackMoves = getValidMoves(board, BLACK).length;
             const whiteMoves = getValidMoves(board, WHITE).length;
             if (difficulty === 1) { // Easy
