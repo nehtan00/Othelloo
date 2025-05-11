@@ -26,7 +26,6 @@
         };
 
         // Determine the appId to be used for Firestore paths.
-        // For a self-contained file like this on GitHub Pages, we can use projectId from firebaseConfig.
         const appId = firebaseConfig.projectId; // Using projectId as the application ID for Firestore paths
 
         // Initialize Firebase app
@@ -39,7 +38,7 @@
         window.db = db;
         window.auth = auth;
         window.appId = appId;
-        // currentUserUid will be set via onAuthStateChanged and accessed via window.currentUserUid
+        // window.currentUserUid will be set via onAuthStateChanged
         window.currentUserUid = null;
 
         // Get references to the multiplayer buttons to enable/disable them
@@ -87,6 +86,7 @@
 
         // Firebase Interaction Functions (made globally accessible)
         window.createFirebaseGame = async (gameId, player1Uid) => {
+            console.log("createFirebaseGame: Attempting to create document for gameId:", gameId, "by UID:", player1Uid); // Debug
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             const initialBoard = Array(8).fill(null).map(() => Array(8).fill(null));
             initialBoard[3][3] = 'white';
@@ -102,11 +102,18 @@
                 status: 'waiting', // 'waiting', 'playing', 'finished'
                 lastMoveTimestamp: Date.now()
             };
-            await setDoc(gameRef, gameData); // Use setDoc for creation
-            console.log("Game created in Firestore:", gameId);
+            try {
+                await setDoc(gameRef, gameData); // Use setDoc for creation
+                console.log("createFirebaseGame: Document successfully written!"); // Debug
+                return true;
+            } catch (e) {
+                console.error("createFirebaseGame: Error writing document:", e); // Debug
+                throw e; // Re-throw the error to be caught by the caller
+            }
         };
 
         window.joinFirebaseGame = async (gameId, player2Uid) => {
+            console.log("joinFirebaseGame: Attempting to join gameId:", gameId, "by UID:", player2Uid); // Debug
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             const gameSnap = await getDoc(gameRef);
 
@@ -114,14 +121,19 @@
                 const gameData = gameSnap.data();
                 // Check if there's only one player and it's not the joining player
                 if (gameData.players.length === 1 && gameData.players[0].uid !== player2Uid) {
-                    await updateDoc(gameRef, {
-                        players: arrayUnion({uid: player2Uid, color: 'white'}), // Add Player 2 (White)
-                        status: 'playing' // Change game status to playing
-                    });
-                    console.log("Joined game in Firestore:", gameId);
-                    return true;
+                    try {
+                        await updateDoc(gameRef, {
+                            players: arrayUnion({uid: player2Uid, color: 'white'}), // Add Player 2 (White)
+                            status: 'playing' // Change game status to playing
+                        });
+                        console.log("joinFirebaseGame: Game successfully joined in Firestore:", gameId); // Debug
+                        return true;
+                    } catch (e) {
+                        console.error("joinFirebaseGame: Error updating document for join:", e); // Debug
+                        throw e;
+                    }
                 } else if (gameData.players.some(p => p.uid === player2Uid)) {
-                     console.log("Rejoining existing game:", gameId);
+                     console.log("joinFirebaseGame: Rejoining existing game:", gameId); // Debug
                      return true; // Already in the game, just rejoining
                 } else if (gameData.players.length === 2) {
                     alert("This game is already full.");
@@ -134,44 +146,59 @@
         };
 
         window.updateFirebaseBoard = async (gameId, newBoard, nextPlayer, newStatus) => {
+            console.log("updateFirebaseBoard: Updating gameId:", gameId, "to status:", newStatus); // Debug
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
-            await updateDoc(gameRef, {
-                board: newBoard,
-                currentPlayer: nextPlayer,
-                status: newStatus,
-                lastMoveTimestamp: Date.now() // Update timestamp on every move
-            });
+            try {
+                await updateDoc(gameRef, {
+                    board: newBoard,
+                    currentPlayer: nextPlayer,
+                    status: newStatus,
+                    lastMoveTimestamp: Date.now() // Update timestamp on every move
+                });
+                console.log("updateFirebaseBoard: Game state successfully updated in Firestore."); // Debug
+            } catch (e) {
+                console.error("updateFirebaseBoard: Error updating game state:", e); // Debug
+                throw e;
+            }
         };
 
         window.listenToFirebaseGame = (gameId, callback) => {
+            console.log("listenToFirebaseGame: Setting up listener for gameId:", gameId); // Debug
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             // Set up a real-time listener for game changes
             return onSnapshot(gameRef, (docSnap) => {
                 if (docSnap.exists()) {
+                    console.log("listenToFirebaseGame: Received update for gameId:", gameId, docSnap.data()); // Debug
                     callback(docSnap.data()); // Pass the updated game data to the callback
                 } else {
-                    console.error("Game document no longer exists!");
+                    console.error("listenToFirebaseGame: Game document no longer exists for gameId:", gameId); // Debug
                     alert("The game you were in no longer exists. Returning to lobby.");
                     closeWinnerModal(); // Force close if game disappears
-                    // Consider also leaving the lobby if the game doesn't exist.
                     showMultiplayerLobby();
                 }
             }, (error) => {
-                console.error("Error listening to game:", error);
+                console.error("listenToFirebaseGame: Error listening to game:", error); // Debug
                 alert("There was an error syncing with the game. Please refresh the page.");
             });
         };
 
         window.getAvailableGames = async () => {
+            console.log("getAvailableGames: Fetching available games..."); // Debug
             const gamesCollectionRef = collection(db, `artifacts/${appId}/public/data/games`);
             // Query for games that are in 'waiting' status and limit to 10 for display
             const q = query(gamesCollectionRef, where("status", "==", "waiting"), limit(10));
-            const querySnapshot = await getDocs(q);
-            const availableGames = [];
-            querySnapshot.forEach((doc) => {
-                availableGames.push(doc.data().gameId);
-            });
-            return availableGames;
+            try {
+                const querySnapshot = await getDocs(q);
+                const availableGames = [];
+                querySnapshot.forEach((doc) => {
+                    availableGames.push(doc.data().gameId);
+                });
+                console.log("getAvailableGames: Found available games:", availableGames); // Debug
+                return availableGames;
+            } catch (e) {
+                console.error("getAvailableGames: Error fetching available games:", e); // Debug
+                throw e;
+            }
         };
     </script>
     <style>
@@ -529,7 +556,7 @@
         const db = window.db;
         const auth = window.auth;
         const appId = window.appId;
-        // window.currentUserUid is updated by onAuthStateChanged, use that directly or auth.currentUser.uid
+        // window.currentUserUid is updated by onAuthStateChanged, and is now directly accessed via auth.currentUser.uid
         const createFirebaseGame = window.createFirebaseGame;
         const joinFirebaseGame = window.joinFirebaseGame;
         const updateFirebaseBoard = window.updateFirebaseBoard;
@@ -584,10 +611,11 @@
             // Access currentUserUid directly from auth.currentUser for the most up-to-date value
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-                alert("Authentication is not complete. Please wait for 'Authenticating...' status to change and the buttons to enable.");
+                console.error("createGame: currentUserUid is null. Authentication might not be complete yet.");
+                alert("Authentication is not complete. Please wait for 'Authenticated' status to appear and try again.");
                 return;
             }
-            console.log("Attempting to create game. Current User UID:", currentUserId); // Debug log
+            console.log("createGame: Attempting to create game. Current User UID:", currentUserId); // Debug log
 
             const gameId = generateGameId();
             displayGameId.textContent = gameId;
@@ -627,10 +655,11 @@
             // Access currentUserUid directly from auth.currentUser for the most up-to-date value
             const currentUserId = auth.currentUser?.uid;
             if (!currentUserId) {
-                alert("Authentication is not complete. Please wait for 'Authenticating...' status to change and the buttons to enable.");
+                console.error("joinGame: currentUserUid is null. Authentication might not be complete yet.");
+                alert("Authentication is not complete. Please wait for 'Authenticated' status to appear and try again.");
                 return;
             }
-            console.log("Attempting to join game. Current User UID:", currentUserId); // Debug log
+            console.log("joinGame: Attempting to join game. Current User UID:", currentUserId); // Debug log
 
             const gameId = gameIdInput.value.trim();
             if (!gameId) {
@@ -667,14 +696,13 @@
 
         // Joins game if gameId is present in URL on page load
         async function joinGameFromUrl(gameId) {
-            // Access currentUserUid directly from auth.currentUser for the most up-to-date value
-            const currentUserId = auth.currentUser?.uid;
+            const currentUserId = auth.currentUser?.uid; // Access directly from auth.currentUser
             if (!currentUserId) {
                 // This function might be called before authentication completes.
                 // `onAuthStateChanged` will re-call this once `currentUserUid` is set.
                 return;
             }
-            console.log(`Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`); // Debug log
+            console.log(`joinGameFromUrl: Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`); // Debug log
 
             try {
                 const joined = await joinFirebaseGame(gameId, currentUserId); // Use currentUserId
