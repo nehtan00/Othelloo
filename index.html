@@ -16,7 +16,43 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            flex-direction: column; /* Stack the selection and game */
+            flex-direction: column;
+        }
+
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
 
         .selection-container {
@@ -162,6 +198,13 @@
     </style>
 </head>
 <body>
+    <div class="modal" id="winner-modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeWinnerModal()">&times;</span>
+            <p id="winner-message"></p>
+        </div>
+    </div>
+
     <div class="selection-container" id="game-mode-selection">
         <h2>Choose Game Mode</h2>
         <button onclick="startGame('pvp')">Player vs Player</button>
@@ -192,6 +235,8 @@
         const boardElement = document.getElementById('othello-board');
         const turnElement = document.getElementById('turn');
         const scoreElement = document.getElementById('score');
+        const winnerModal = document.getElementById('winner-modal');
+        const winnerMessage = document.getElementById('winner-message');
         let board = Array(8).fill(null).map(() => Array(8).fill(null));
         let currentPlayer = 'black';
         let possibleMoves = [];
@@ -378,10 +423,10 @@
                     currentPlayer = getOpponent(currentPlayer);
                     possibleMoves = getPossibleMoves(currentPlayer);
                     updateTurnDisplay();
-                    updateBoardDisplay(); // To show possible moves for the new player
+                    updateBoardDisplay();
                     alert(`${currentPlayer === 'black' ? 'Black' : 'White'} has no moves and skips their turn.`);
                     if (gameMode === 'pvc' && currentPlayer === 'white') {
-                        setTimeout(computerMove, 1000); // Computer takes turn after skip
+                        setTimeout(computerMove, 1000);
                     }
                     return;
                 }
@@ -389,7 +434,7 @@
 
             updateTurnDisplay();
             updateScoreDisplay();
-            updateBoardDisplay(); // To show the new possible moves
+            updateBoardDisplay();
 
             if (gameMode === 'pvc' && currentPlayer === 'white') {
                 setTimeout(computerMove, 1000);
@@ -407,48 +452,4 @@
             }
 
             let winner = '';
-            if (blackCount > whiteCount) {
-                winner = 'Black';
-            } else if (whiteCount > blackCount) {
-                winner = 'White';
-            } else {
-                winner = 'It\'s a Draw!';
-            }
-
-            alert(`Game Over! Black: ${blackCount}, White: ${whiteCount}. Winner: ${winner}`);
-        }
-
-        function resetGame() {
-            board = Array(8).fill(null).map(() => Array(8).fill(null));
-            currentPlayer = 'black';
-            initializeBoard();
-            updateBoardDisplay();
-            updateTurnDisplay();
-            updateScoreDisplay();
-            possibleMoves = getPossibleMoves(currentPlayer);
-            updateBoardDisplay(); // To highlight initial possible moves
-            if (gameMode === 'pvc' && currentPlayer === 'white') {
-                setTimeout(computerMove, 1000);
-            }
-        }
-
-        function computerMove() {
-            if (gameMode !== 'pvc' || currentPlayer !== 'white') {
-                return;
-            }
-
-            const possibleComputerMoves = getPossibleMoves('white');
-            if (possibleComputerMoves.length > 0) {
-                let bestMove;
-
-                switch (computerDifficulty) {
-                    case 'easy':
-                        bestMove = possibleComputerMoves[Math.floor(Math.random() * possibleComputerMoves.length)];
-                        break;
-                    case 'medium':
-                        // Basic strategy: prioritize corners, then moves that flip more pieces
-                        bestMove = findBestMove(possibleComputerMoves);
-                        break;
-                    case 'hard':
-                        // More advanced strategy (can be improved further): minimax with a limited depth
-                        bestMove = findBestMoveMinimax(board, 'white', 3); // Depth of 3 for example
+            if (black
