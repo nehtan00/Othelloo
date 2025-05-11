@@ -310,7 +310,7 @@
         <div class="current-game-info hidden" id="current-game-info">
             <p>Game ID: <span id="display-game-id"></span></p>
             <p>Your Color: <span id="your-color"></span></p>
-            <button onclick="window.leaveGame()">Leave Game</button>
+            <button onclick="window.leaveGame()">Leave Lobby</button>
             <button onclick="window.copyGameLink()">Copy Game Link</button>
         </div>
     </div>
@@ -328,8 +328,8 @@
         <div class="info">
             <p id="turn">Black's Turn</p>
             <p id="score">Black: 2, White: 2</p>
-            <button onclick="window.resetGame()">Reset Game</button>
-        </div>
+            <p>Game ID: <span id="game-display-id-in-game"></span></p> <button onclick="window.resetGame()">Reset Game</button>
+            <button onclick="window.leaveGameFromInGame()">Back to Lobby</button> </div>
     </div>
 
     <script type="module">
@@ -374,11 +374,12 @@
         const gameIdInput = document.getElementById('game-id-input');
         const availableGamesDiv = document.getElementById('available-games');
         const currentGameInfo = document.getElementById('current-game-info');
-        const displayGameId = document.getElementById('display-game-id');
+        const displayGameId = document.getElementById('display-game-id'); // For lobby
         const yourColorElement = document.getElementById('your-color');
         const createGameButton = document.getElementById('create-game-button');
         const joinGameButton = document.getElementById('join-game-button');
         const refreshGamesButton = document.getElementById('refresh-games-button');
+        const gameDisplayIdInGame = document.getElementById('game-display-id-in-game'); // For in-game display
 
 
         // Game state variables
@@ -393,7 +394,6 @@
 
 
         // --- Firebase Anonymous Authentication and UI state management ---
-        // This block must be within the module script to access `auth`
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 console.log("Firebase authenticated:", user.uid);
@@ -496,7 +496,7 @@
             console.log("updateFirebaseBoard: Updating gameId:", gameId, "to status:", newStatus);
             const gameRef = doc(db, `artifacts/${appId}/public/data/games`, gameId);
             try {
-                // !!! FIX: Convert 2D array to JSON string for Firestore storage !!!
+                // Convert 2D array to JSON string for Firestore storage
                 await updateDoc(gameRef, {
                     board: JSON.stringify(newBoard), // Store as JSON string
                     currentPlayer: nextPlayer,
@@ -570,6 +570,13 @@
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
             window.resetGame();
+
+            // Display game ID on the game screen if it's a multiplayer game
+            if (gameMode === 'multiplayer' && currentGameId) {
+                gameDisplayIdInGame.textContent = currentGameId;
+            } else {
+                gameDisplayIdInGame.textContent = 'N/A'; // Clear or hide for single player
+            }
         };
 
         window.closeWinnerModal = function() {
@@ -597,18 +604,19 @@
             displayGameId.textContent = gameId;
             yourColorElement.textContent = "Black (Player 1)";
             playerColor = 'black';
-            currentGameId = gameId;
+            currentGameId = gameId; // Set currentGameId here
 
             try {
                 await createFirebaseGame(gameId, currentUserId);
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
                 unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                    loadGameFromFirebase(gameData); // The board here will be a string, parsed inside loadGameFromFirebase
+                    loadGameFromFirebase(gameData);
 
                     if (gameData.status === 'playing' && gameData.players.length === 2) {
                         multiplayerLobby.classList.add('hidden');
                         gameContainer.classList.remove('hidden');
+                        gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
                     } else if (gameData.status === 'finished') {
                         endGame();
                     }
@@ -641,10 +649,10 @@
                     displayGameId.textContent = gameId;
                     yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
-                    currentGameId = gameId;
+                    currentGameId = gameId; // Set currentGameId here
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData); // The board here will be a string, parsed inside loadGameFromFirebase
+                        loadGameFromFirebase(gameData);
                         if (gameData.status === 'finished') {
                             endGame();
                         }
@@ -652,6 +660,7 @@
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
                     currentGameInfo.classList.remove('hidden');
+                    gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
                 }
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -676,7 +685,7 @@
                     displayGameId.textContent = gameId;
                     yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
-                    currentGameId = gameId;
+                    currentGameId = gameId; // Set currentGameId here
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
                         loadGameFromFirebase(gameData);
@@ -685,6 +694,7 @@
                         }
                     });
                     currentGameInfo.classList.remove('hidden');
+                    gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
                 } else {
                     initialSetup.classList.remove('hidden');
                 }
@@ -737,6 +747,17 @@
             window.showMultiplayerLobby();
         };
 
+        // New function to leave the game screen and go back to the lobby
+        window.leaveGameFromInGame = function() {
+            if (unsubscribeFromGame) {
+                unsubscribeFromGame(); // Stop listening to this game
+            }
+            currentGameId = null; // Clear current game ID
+            playerColor = null; // Clear player color
+            gameContainer.classList.add('hidden'); // Hide game board
+            window.showMultiplayerLobby(); // Show the multiplayer lobby
+        };
+
         window.copyGameLink = function() {
             if (currentGameId) {
                 const gameLink = `${window.location.origin}${window.location.pathname}?gameId=${currentGameId}`;
@@ -749,9 +770,10 @@
         // This function updates the local game state (board, current player etc.)
         // based on the data received from Firebase.
         function loadGameFromFirebase(gameData) {
-            // !!! FIX: Parse the board from JSON string back to 2D array !!!
+            // Parse the board from JSON string back to 2D array
             board = JSON.parse(gameData.board);
             currentPlayer = gameData.currentPlayer;
+            // Ensure playerColor is correctly set for the client from gameData.players
             if (gameData.players && gameData.players.length > 0 && auth.currentUser?.uid) {
                 const selfPlayer = gameData.players.find(p => p.uid === auth.currentUser.uid);
                 if (selfPlayer) {
@@ -763,6 +785,12 @@
             updateBoardDisplay();
             updateTurnDisplay();
             updateScoreDisplay();
+            // Update the game ID displayed on the game screen
+            if (gameMode === 'multiplayer' && currentGameId) {
+                gameDisplayIdInGame.textContent = currentGameId;
+            } else {
+                gameDisplayIdInGame.textContent = 'N/A';
+            }
         }
 
 
@@ -1104,7 +1132,7 @@
             if (chosenMove) {
                 const cellElement = boardElement.querySelector(`[data-row="${chosenMove.row}"][data-col="${chosenMove.col}"]`);
                 if (cellElement) {
-                    window.handleMove({ target: cellElement }); // Call global handleMove
+                    window.handleMove({ target: cellElement });
                 }
             }
         }
