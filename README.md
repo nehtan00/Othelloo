@@ -1,0 +1,2 @@
+# Othelloo
+Othelloo Browser game
