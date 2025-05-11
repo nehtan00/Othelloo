@@ -569,13 +569,16 @@
             multiplayerLobby.classList.add('hidden');
             difficultySelection.classList.add('hidden');
             gameContainer.classList.remove('hidden');
-            window.resetGame();
 
-            // Display game ID on the game screen if it's a multiplayer game
-            if (gameMode === 'multiplayer' && currentGameId) {
-                gameDisplayIdInGame.textContent = currentGameId;
-            } else {
-                gameDisplayIdInGame.textContent = 'N/A'; // Clear or hide for single player
+            // For multiplayer, create the board HTML immediately but don't initialize data yet.
+            // Data will come from Firebase listener.
+            createBoard(); // Only create HTML elements for the board once
+
+            if (gameMode === 'pvp' || gameMode === 'pvc') {
+                window.resetGame(); // Reset game logic for single-player/PvP immediately
+            } else { // Multiplayer
+                // Initialize game ID display in game screen
+                gameDisplayIdInGame.textContent = currentGameId ? currentGameId : 'N/A';
             }
         };
 
@@ -601,7 +604,7 @@
             console.log("createGame: Attempting to create game. Current User UID:", currentUserId);
 
             const gameId = generateGameId();
-            displayGameId.textContent = gameId;
+            displayGameId.textContent = gameId; // Update lobby game ID display
             yourColorElement.textContent = "Black (Player 1)";
             playerColor = 'black';
             currentGameId = gameId; // Set currentGameId here
@@ -611,7 +614,7 @@
                 alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
                 unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                    loadGameFromFirebase(gameData);
+                    loadGameFromFirebase(gameData); // This will parse the board and update display
 
                     if (gameData.status === 'playing' && gameData.players.length === 2) {
                         multiplayerLobby.classList.add('hidden');
@@ -622,6 +625,8 @@
                     }
                 });
                 currentGameInfo.classList.remove('hidden');
+                // When creating a game, immediately transition to the game view (it will be in 'waiting' state initially)
+                window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
             } catch (error) {
                 console.error("Error creating game:", error);
                 alert(`Failed to create game: ${error.message}. Please check console for details and Firebase rules.`);
@@ -646,13 +651,13 @@
             try {
                 const joined = await joinFirebaseGame(gameId, currentUserId);
                 if (joined) {
-                    displayGameId.textContent = gameId;
+                    displayGameId.textContent = gameId; // Update lobby game ID display
                     yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
                     currentGameId = gameId; // Set currentGameId here
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData);
+                        loadGameFromFirebase(gameData); // This will parse the board and update display
                         if (gameData.status === 'finished') {
                             endGame();
                         }
@@ -660,7 +665,7 @@
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
                     currentGameInfo.classList.remove('hidden');
-                    gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
+                    window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
                 }
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -682,19 +687,19 @@
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
 
-                    displayGameId.textContent = gameId;
+                    displayGameId.textContent = gameId; // Update lobby game ID display
                     yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
                     currentGameId = gameId; // Set currentGameId here
 
                     unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                        loadGameFromFirebase(gameData);
+                        loadGameFromFirebase(gameData); // This will parse the board and update display
                         if (gameData.status === 'finished') {
                             endGame();
                         }
                     });
                     currentGameInfo.classList.remove('hidden');
-                    gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
+                    window.startGame('multiplayer'); // This will call createBoard() and set game ID on screen
                 } else {
                     initialSetup.classList.remove('hidden');
                 }
@@ -752,6 +757,9 @@
             if (unsubscribeFromGame) {
                 unsubscribeFromGame(); // Stop listening to this game
             }
+            // You could also update the Firebase game status here (e.g., 'abandoned') if you want to
+            // mark the game as no longer active in Firestore. For simplicity, we're just leaving locally.
+
             currentGameId = null; // Clear current game ID
             playerColor = null; // Clear player color
             gameContainer.classList.add('hidden'); // Hide game board
@@ -768,12 +776,11 @@
         };
 
         // This function updates the local game state (board, current player etc.)
-        // based on the data received from Firebase.
+        // based on the data received from Firebase. It is called by the onSnapshot listener.
         function loadGameFromFirebase(gameData) {
             // Parse the board from JSON string back to 2D array
             board = JSON.parse(gameData.board);
             currentPlayer = gameData.currentPlayer;
-            // Ensure playerColor is correctly set for the client from gameData.players
             if (gameData.players && gameData.players.length > 0 && auth.currentUser?.uid) {
                 const selfPlayer = gameData.players.find(p => p.uid === auth.currentUser.uid);
                 if (selfPlayer) {
@@ -785,11 +792,11 @@
             updateBoardDisplay();
             updateTurnDisplay();
             updateScoreDisplay();
-            // Update the game ID displayed on the game screen
+            // Ensure game ID is displayed on the game screen
             if (gameMode === 'multiplayer' && currentGameId) {
                 gameDisplayIdInGame.textContent = currentGameId;
             } else {
-                gameDisplayIdInGame.textContent = 'N/A';
+                gameDisplayIdInGame.textContent = 'N/A'; // For single player, or if gameId isn't set yet
             }
         }
 
@@ -805,6 +812,8 @@
         }
 
         function createBoard() {
+            // This function creates the HTML structure of the board.
+            // It should be called once when the gameContainer is made visible.
             boardElement.innerHTML = '';
             for (let i = 0; i < 8; i++) {
                 for (let j = 0; j < 8; j++) {
@@ -813,7 +822,7 @@
                     cell.dataset.row = i;
                     cell.dataset.col = j;
                     cell.addEventListener('click', window.handleMove); // Call global function
-                    const piece = board[i][j];
+                    const piece = board[i][j]; // Use current local board state to initially populate
                     if (piece) {
                         const pieceElement = document.createElement('div');
                         pieceElement.classList.add('piece', piece);
@@ -825,11 +834,12 @@
         }
 
         function updateBoardDisplay() {
+            // This function updates the visual representation of the pieces on the existing HTML board.
             const cells = boardElement.querySelectorAll('.cell');
             cells.forEach(cell => {
                 const row = parseInt(cell.dataset.row);
                 const col = parseInt(cell.dataset.col);
-                cell.innerHTML = '';
+                cell.innerHTML = ''; // Clear current piece
 
                 const piece = board[row][col];
                 if (piece) {
@@ -1046,12 +1056,14 @@
         };
 
         window.resetGame = function() {
+            // This reset is for single player or PvP.
+            // Multiplayer games are reset by leaving and creating/joining a new one.
             if (gameMode === 'multiplayer') {
                 alert("To reset a multiplayer game, please leave the current game from the lobby and create/join a new one.");
                 return;
             }
             initializeBoard();
-            createBoard();
+            createBoard(); // Recreate HTML elements
             updateTurnDisplay();
             updateScoreDisplay();
             possibleMoves = getPossibleMoves(currentPlayer);
@@ -1222,3 +1234,4 @@
     </script>
 </body>
 </html>
+
