@@ -18,6 +18,8 @@
             min-height: 100vh;
             margin: 0;
             flex-direction: column; /* Stack the selection and game */
+            padding: 10px; /* Add some padding for smaller screens */
+            box-sizing: border-box; /* Include padding in element's total width and height */
         }
 
         .auth-status {
@@ -51,13 +53,14 @@
             margin: auto; /* Center horizontally and vertically */
             padding: 30px;
             border: 1px solid #888;
-            width: 60%; /* Responsive width */
+            width: 80%; /* Responsive width */
             max-width: 400px; /* Max width for larger screens */
             border-radius: 8px;
             text-align: center;
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
             color: #5e503f; /* Earthy text color */
             font-size: 1.2em;
+            box-sizing: border-box;
         }
 
         .modal-content h3 {
@@ -81,22 +84,32 @@
             cursor: pointer;
         }
 
-        .selection-container {
+        .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
             background-color: #a08e79; /* Medium earthy tone */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            text-align: center;
+            padding: 20px; /* Reduced padding for smaller screens */
             margin-bottom: 20px;
+            width: 95%; /* Use a percentage for responsiveness */
+            max-width: 560px; /* A bit more generous max width */
+            text-align: center;
+            color: #5e503f;
+            box-sizing: border-box;
+        }
+        @media (min-width: 600px) { /* Adjust for larger screens */
+            .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
+                padding: 30px;
+            }
         }
 
-        .selection-container h2 {
+
+        .selection-container h2, .lobby-container h2, .lobby-container h3, .difficulty-container h3, .rules-container h3 {
             color: #5e503f; /* Earthy text color */
             margin-bottom: 15px;
         }
 
         .selection-container button, .difficulty-container button, .info button,
-        .lobby-controls button {
+        .lobby-controls button, .rules-toggle {
             font-family: 'Google Sans', sans-serif;
             background-color: #c6b8a9; /* Lighter earthy tone */
             color: #5e503f; /* Earthy text color */
@@ -111,45 +124,18 @@
         }
 
         .selection-container button:hover, .difficulty-container button:hover, .info button:hover,
-        .lobby-controls button:hover {
+        .lobby-controls button:hover, .rules-toggle:hover {
             background-color: #b0a194; /* Slightly darker hover */
             transform: translateY(-2px); /* Subtle lift on hover */
         }
         .selection-container button:active, .difficulty-container button:active, .info button:active,
-        .lobby-controls button:active {
+        .lobby-controls button:active, .rules-toggle:active {
             transform: translateY(0); /* Press down on click */
         }
 
         .lobby-controls button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-        }
-
-        .difficulty-container {
-            background-color: #a08e79;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .difficulty-container h3 {
-            color: #5e503f;
-            margin-bottom: 10px;
-        }
-
-        .lobby-container {
-            background-color: #a08e79;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .lobby-container h2, .lobby-container h3 {
-            color: #5e503f;
         }
 
         .lobby-controls input[type="text"] {
@@ -161,6 +147,9 @@
             font-size: 16px;
             background-color: #f9f9f9;
             color: #333;
+            width: calc(100% - 100px); /* Make input responsive */
+            max-width: 200px; /* Limit max width */
+            box-sizing: border-box;
         }
 
         .available-games-list {
@@ -196,26 +185,22 @@
         }
 
 
-        .container {
-            background-color: #a08e79;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px;
-        }
-
         .board {
             display: grid;
-            grid-template-columns: repeat(8, 60px);
-            grid-template-rows: repeat(8, 60px);
-            gap: 4px;
+            grid-template-columns: repeat(8, 10vw); /* Use viewport units for responsiveness */
+            grid-template-rows: repeat(8, 10vw);    /* Use viewport units for responsiveness */
+            gap: 1vw; /* Responsive gap */
             background-color: #776e65; /* Darker earthy tone for grid lines */
             border-radius: 4px;
+            max-width: 85vw; /* Limit overall board size relative to viewport */
+            max-height: 85vw;
+            margin: 0 auto; /* Center the board */
         }
 
         .cell {
             background-color: #c6b8a9; /* Lighter earthy tone for cells */
-            width: 60px;
-            height: 60px;
+            width: 10vw; /* Responsive width */
+            height: 10vw; /* Responsive height */
             border-radius: 4px;
             display: flex;
             justify-content: center;
@@ -228,8 +213,8 @@
         }
 
         .piece {
-            width: 48px;
-            height: 48px;
+            width: 8vw; /* Responsive piece size */
+            height: 8vw; /* Responsive piece size */
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s ease-in-out;
@@ -253,9 +238,14 @@
             display: flex; /* Use flex to center the icon */
             justify-content: center;
             align-items: center;
-            font-size: 2.2em; /* Adjust size of the icon */
+            font-size: 2.5em; /* Adjust size of the icon for better visibility */
             color: #333; /* Default color for black castles */
         }
+        /* Ensure corner-locked piece scales with the cell */
+        .cell .piece.corner-locked {
+            font-size: calc(2.5em * (10vw / 60px)); /* Scale font size relative to original 60px cell */
+        }
+
 
         .piece.corner-locked.white {
             color: #f9f9f9; /* Color for white castles */
@@ -275,8 +265,10 @@
         .cell.possible-move::before {
             content: '';
             display: block;
-            width: 16px;
-            height: 16px;
+            width: 2.5vw; /* Responsive indicator size */
+            height: 2.5vw; /* Responsive indicator size */
+            max-width: 16px; /* Prevent it from getting too large on huge screens */
+            max-height: 16px;
             border-radius: 50%;
             background-color: rgba(51, 51, 51, 0.6); /* Indicate possible black move */
             transition: background-color 0.2s ease-in-out;
@@ -291,6 +283,8 @@
             margin-top: 20px;
             text-align: center;
             color: #5e503f; /* Earthy text color */
+            width: 100%; /* Ensure info section is responsive */
+            box-sizing: border-box;
         }
 
         .info p {
@@ -298,13 +292,10 @@
         }
 
         .rules-container {
-            background-color: #a08e79;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
             margin-top: 20px;
-            width: 90%; /* Use a percentage for responsiveness */
-            max-width: 520px; /* Max width for larger screens, matching board */
+            width: 95%; /* Use a percentage for responsiveness */
+            max-width: 560px; /* Max width for larger screens */
             text-align: center;
             color: #5e503f;
             box-sizing: border-box; /* Include padding in the width */
@@ -329,6 +320,7 @@
             text-align: left; /* Align content within */
             padding: 0 15px; /* Add more padding to ensure text isn't cut off at edges */
             box-sizing: border-box; /* Include padding in the max-height */
+            font-size: 0.95em; /* Slightly reduce font size for better mobile fit */
         }
 
         .rules-content.expanded {
@@ -342,7 +334,6 @@
             padding-left: 20px; /* Indent list items */
             text-align: left;
             margin: 0; /* Remove default ul/ol margins */
-            /* No max-width here to allow text to wrap within the container's padding */
         }
         .rules-content ul {
             list-style: disc; /* Use bullet points for tips */
@@ -440,7 +431,7 @@
                 <li><b>Avoid Edges (Mostly):</b> Pieces on the edges can become stable (unflippable) if you control enough of them. However, be careful with squares directly next to corners on the edges (often called "X-squares" or "C-squares"), as these can often give your opponent access to the corner.</li>
                 <li><b>Mobility is Key:</b> The player with more available valid moves often has an advantage. Try to limit your opponent's choices while expanding your own.</li>
                 <li><b>Don't Flip Too Many (Early):</b> Sometimes, flipping a large number of pieces early in the game can be detrimental if it opens up strong positions (like corners) for your opponent. Focus on strategic placement over just maximizing flips.</li>
-                <li><b>Think Ahead:</b> Othello is a game of foresight. Try to visualize the board a few moves into the future to anticipate your opponent's strategy and plan your own.</li>
+                <li><b><b>Think Ahead:</b> Othello is a game of foresight. Try to visualize the board a few moves into the future to anticipate your opponent's strategy and plan your own.</li>
             </ul>
         </div>
     </div>
