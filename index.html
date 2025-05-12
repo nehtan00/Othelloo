@@ -570,10 +570,10 @@
             try {
                 await setDoc(gameRef, gameData);
                 console.log("createFirebaseGame: Document successfully written!");
-                return true;
+                return { success: true, message: "Game created successfully." }; // Return success message
             } catch (e) {
                 console.error("createFirebaseGame: Error writing document:", e);
-                throw e;
+                return { success: false, message: e.message || "Unknown error during game creation." }; // Return failure message
             }
         }
 
@@ -592,21 +592,19 @@
                             status: 'playing' // Change game status to playing
                         });
                         console.log("joinFirebaseGame: Game successfully joined in Firestore:", gameId);
-                        return true;
+                        return { success: true, message: "Game joined successfully." }; // Return success
                     } catch (e) {
                         console.error("joinFirebaseGame: Error updating document for join:", e);
-                        throw e;
+                        return { success: false, message: e.message || "Permission denied or other update error." }; // Return error message
                     }
                 } else if (gameData.players.some(p => p.uid === player2Uid)) {
                      console.log("joinFirebaseGame: Rejoining existing game:", gameId);
-                     return true; // Already in the game, just rejoining
+                     return { success: true, message: "Rejoining existing game." }; // Already in the game, just rejoining
                 } else if (gameData.players.length === 2) {
-                    alert("This game is already full.");
-                    return false;
+                    return { success: false, message: "This game is already full." }; // Game is already full
                 }
             } else {
-                alert("Game ID does not exist.");
-                return false;
+                return { success: false, message: "Game ID does not exist." }; // Game ID does not exist
             }
         }
 
@@ -622,9 +620,10 @@
                     lastMoveTimestamp: Date.now()
                 });
                 console.log("updateFirebaseBoard: Game state successfully updated in Firestore.");
+                return { success: true, message: "Board updated successfully." };
             } catch (e) {
                 console.error("updateFirebaseBoard: Error updating game state:", e);
-                throw e;
+                return { success: false, message: e.message || "Unknown error updating board." };
             }
         }
 
@@ -730,23 +729,27 @@
             currentGameId = gameId; // Set currentGameId here for use in startGame and listener
 
             try {
-                await createFirebaseGame(gameId, currentUserId);
-                alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
+                const result = await createFirebaseGame(gameId, currentUserId);
+                if (result.success) {
+                    alert(`Game created! Share this link with a friend:\n${window.location.origin}${window.location.pathname}?gameId=${gameId}`);
 
-                // Setup listener before transitioning, so board gets data immediately
-                unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
-                    loadGameFromFirebase(gameData); // This will parse the board and update display
+                    // Setup listener before transitioning, so board gets data immediately
+                    unsubscribeFromGame = listenToFirebaseGame(gameId, (gameData) => {
+                        loadGameFromFirebase(gameData); // This will parse the board and update display
 
-                    if (gameData.status === 'playing' && gameData.players.length === 2) {
-                        multiplayerLobby.classList.add('hidden');
-                        gameContainer.classList.remove('hidden');
-                        gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
-                    } else if (gameData.status === 'finished') {
-                        endGame();
-                    }
-                });
-                currentGameInfo.classList.remove('hidden');
-                window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
+                        if (gameData.status === 'playing' && gameData.players.length === 2) {
+                            multiplayerLobby.classList.add('hidden');
+                            gameContainer.classList.remove('hidden');
+                            gameDisplayIdInGame.textContent = currentGameId; // Update game ID on game screen
+                        } else if (gameData.status === 'finished') {
+                            endGame();
+                        }
+                    });
+                    currentGameInfo.classList.remove('hidden');
+                    window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
+                } else {
+                    alert(`Failed to create game: ${result.message}`);
+                }
             } catch (error) {
                 console.error("Error creating game:", error);
                 alert(`Failed to create game: ${error.message}. Please check console for details and Firebase rules.`);
@@ -769,8 +772,8 @@
             }
 
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserId);
-                if (joined) {
+                const result = await joinFirebaseGame(gameId, currentUserId);
+                if (result.success) {
                     displayGameId.textContent = gameId; // Update lobby game ID display
                     yourColorElement.textContent = "White (Player 2)";
                     playerColor = 'white';
@@ -787,6 +790,8 @@
                     gameContainer.classList.remove('hidden');
                     currentGameInfo.classList.remove('hidden');
                     window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
+                } else {
+                    alert(`Failed to join game: ${result.message}`);
                 }
             } catch (error) {
                 console.error("Error joining game:", error);
@@ -802,8 +807,8 @@
             console.log(`joinGameFromUrl: Attempting to join game from URL: ${gameId}. Current User UID: ${currentUserId}`);
 
             try {
-                const joined = await joinFirebaseGame(gameId, currentUserId);
-                if (joined) {
+                const result = await joinFirebaseGame(gameId, currentUserId);
+                if (result.success) {
                     initialSetup.classList.add('hidden');
                     multiplayerLobby.classList.add('hidden');
                     gameContainer.classList.remove('hidden');
@@ -823,11 +828,13 @@
                     currentGameInfo.classList.remove('hidden');
                     window.startGame('multiplayer'); // Transition to game view (board will be populated by listener)
                 } else {
-                    initialSetup.classList.remove('hidden');
+                    // Show an alert with the specific reason why joining from URL failed
+                    alert(`Could not join game from link: ${result.message}. Please try creating/joining manually.`);
+                    initialSetup.classList.remove('hidden'); // Go back to the initial setup if joining fails
                 }
             } catch (error) {
                 console.error("Error joining game from URL:", error);
-                alert("Could not join game from link. It might be invalid or full. Please try creating/joining manually.");
+                alert(`Could not join game from link: ${error.message}. Please try creating/joining manually.`);
                 initialSetup.classList.remove('hidden');
             }
         };
