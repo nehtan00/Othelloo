@@ -84,19 +84,21 @@
             cursor: pointer;
         }
 
+        /* Generalized container styling for responsiveness */
         .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
             background-color: #a08e79; /* Medium earthy tone */
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px; /* Reduced padding for smaller screens */
-            margin-bottom: 20px;
+            padding: 20px; /* Base padding for smaller screens */
+            margin: 0 auto 20px auto; /* Center horizontally and space below */
             width: 95%; /* Use a percentage for responsiveness */
-            max-width: 560px; /* A bit more generous max width */
+            max-width: 560px; /* Max width for larger screens (approx. board width + padding) */
             text-align: center;
             color: #5e503f;
-            box-sizing: border-box;
+            box-sizing: border-box; /* Include padding in the element's total width */
         }
-        @media (min-width: 600px) { /* Adjust for larger screens */
+        /* Adjust padding for larger screens */
+        @media (min-width: 600px) {
             .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
                 padding: 30px;
             }
@@ -184,23 +186,28 @@
             font-size: 1.1em;
         }
 
-
+        /* Board specific responsiveness */
         .board {
             display: grid;
-            grid-template-columns: repeat(8, 10vw); /* Use viewport units for responsiveness */
-            grid-template-rows: repeat(8, 10vw);    /* Use viewport units for responsiveness */
-            gap: 1vw; /* Responsive gap */
-            background-color: #776e65; /* Darker earthy tone for grid lines */
+            /* Using clamp for cell size: min 30px, preferred 10vw, max 60px */
+            grid-template-columns: repeat(8, clamp(30px, 10vw, 60px));
+            grid-template-rows: repeat(8, clamp(30px, 10vw, 60px));
+            /* Using clamp for gap size: min 2px, preferred 1vw, max 4px */
+            gap: clamp(2px, 1vw, 4px);
+            background-color: #776e65;
             border-radius: 4px;
-            max-width: 85vw; /* Limit overall board size relative to viewport */
-            max-height: 85vw;
+            /* Max-width to prevent board from becoming too large on wide screens */
+            max-width: calc(8 * 60px + 7 * 4px); /* Max size based on max cell and gap size */
             margin: 0 auto; /* Center the board */
+            padding: 5px; /* Added padding to the board itself to prevent edge cutting */
+            box-sizing: border-box;
         }
 
         .cell {
-            background-color: #c6b8a9; /* Lighter earthy tone for cells */
-            width: 10vw; /* Responsive width */
-            height: 10vw; /* Responsive height */
+            /* Inherit sizing from grid-template-columns/rows */
+            width: auto;
+            height: auto;
+            background-color: #c6b8a9;
             border-radius: 4px;
             display: flex;
             justify-content: center;
@@ -213,8 +220,9 @@
         }
 
         .piece {
-            width: 8vw; /* Responsive piece size */
-            height: 8vw; /* Responsive piece size */
+            /* Piece size relative to cell size */
+            width: 80%; /* 80% of the cell's width/height */
+            height: 80%; /* 80% of the cell's width/height */
             border-radius: 50%;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             transition: transform 0.2s ease-in-out;
@@ -238,14 +246,10 @@
             display: flex; /* Use flex to center the icon */
             justify-content: center;
             align-items: center;
-            font-size: 2.5em; /* Adjust size of the icon for better visibility */
+            /* Font size relative to the piece/cell size */
+            font-size: clamp(1.5em, 4vw, 2.2em); /* Responsive font size for the icon */
             color: #333; /* Default color for black castles */
         }
-        /* Ensure corner-locked piece scales with the cell */
-        .cell .piece.corner-locked {
-            font-size: calc(2.5em * (10vw / 60px)); /* Scale font size relative to original 60px cell */
-        }
-
 
         .piece.corner-locked.white {
             color: #f9f9f9; /* Color for white castles */
@@ -265,10 +269,8 @@
         .cell.possible-move::before {
             content: '';
             display: block;
-            width: 2.5vw; /* Responsive indicator size */
-            height: 2.5vw; /* Responsive indicator size */
-            max-width: 16px; /* Prevent it from getting too large on huge screens */
-            max-height: 16px;
+            width: clamp(8px, 2.5vw, 16px); /* Responsive indicator size */
+            height: clamp(8px, 2.5vw, 16px); /* Responsive indicator size */
             border-radius: 50%;
             background-color: rgba(51, 51, 51, 0.6); /* Indicate possible black move */
             transition: background-color 0.2s ease-in-out;
@@ -292,13 +294,9 @@
         }
 
         .rules-container {
-            padding: 20px;
-            margin-top: 20px;
-            width: 95%; /* Use a percentage for responsiveness */
-            max-width: 560px; /* Max width for larger screens */
-            text-align: center;
-            color: #5e503f;
-            box-sizing: border-box; /* Include padding in the width */
+            /* Styling from common container applies */
+            /* Adjust content specific styles here */
+            font-size: 0.95em; /* Slightly reduce font size for better mobile fit */
         }
 
         .rules-container h3 {
@@ -320,7 +318,6 @@
             text-align: left; /* Align content within */
             padding: 0 15px; /* Add more padding to ensure text isn't cut off at edges */
             box-sizing: border-box; /* Include padding in the max-height */
-            font-size: 0.95em; /* Slightly reduce font size for better mobile fit */
         }
 
         .rules-content.expanded {
@@ -334,6 +331,7 @@
             padding-left: 20px; /* Indent list items */
             text-align: left;
             margin: 0; /* Remove default ul/ol margins */
+            /* Text within li should naturally wrap due to parent width and word-wrap */
         }
         .rules-content ul {
             list-style: disc; /* Use bullet points for tips */
@@ -431,7 +429,7 @@
                 <li><b>Avoid Edges (Mostly):</b> Pieces on the edges can become stable (unflippable) if you control enough of them. However, be careful with squares directly next to corners on the edges (often called "X-squares" or "C-squares"), as these can often give your opponent access to the corner.</li>
                 <li><b>Mobility is Key:</b> The player with more available valid moves often has an advantage. Try to limit your opponent's choices while expanding your own.</li>
                 <li><b>Don't Flip Too Many (Early):</b> Sometimes, flipping a large number of pieces early in the game can be detrimental if it opens up strong positions (like corners) for your opponent. Focus on strategic placement over just maximizing flips.</li>
-                <li><b><b>Think Ahead:</b> Othello is a game of foresight. Try to visualize the board a few moves into the future to anticipate your opponent's strategy and plan your own.</li>
+                <li><b>Think Ahead:</b> Othello is a game of foresight. Try to visualize the board a few moves into the future to anticipate your opponent's strategy and plan your own.</li>
             </ul>
         </div>
     </div>
