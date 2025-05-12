@@ -863,7 +863,8 @@
                     };
                     availableGamesDiv.appendChild(button);
                 });
-            } catch (error) {
+            }
+            catch (error) {
                 console.error("Error refreshing available games:", error);
                 availableGamesDiv.innerHTML = 'Failed to load games. Please refresh.';
             }
@@ -1362,6 +1363,7 @@
                 for (const move of moves) {
                     const newBoard = getDeepCopy(currentBoardState);
                     newBoard[move.row][move.col] = currentPlayerInMinimax;
+                    flipPieces(newBoard, move.row, move.col, currentPlayerInMinimax);
                     flipPieces(move.row, move.col, currentPlayerInMinimax, newBoard);
 
                     const score = minimax(newBoard, depth - 1, true, player).score;
