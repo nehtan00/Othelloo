@@ -9,6 +9,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* Use :root to define responsive base font size using clamp for fluid typography.
+           This allows all 'rem' units to scale proportionally with the viewport width,
+           ensuring responsiveness across different screen sizes. */
+        :root {
+            font-size: clamp(14px, 2vw, 16px); /* Scales from 14px to 16px, relative to 2% of viewport width */
+        }
+
         body {
             font-family: 'Google Sans', sans-serif;
             background-color: #f0e6d2; /* Light earthy background */
@@ -17,19 +24,19 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            flex-direction: column; /* Stack the selection and game */
-            padding: 10px; /* Add some padding for smaller screens */
-            box-sizing: border-box; /* Include padding in element's total width and height */
+            flex-direction: column; /* Stack the selection and game vertically */
+            padding: 1rem; /* Use rem for responsive padding */
+            box-sizing: border-box; /* Include padding in the element's total width and height */
         }
 
         .auth-status {
             position: fixed;
-            top: 10px;
-            left: 10px;
+            top: 1rem;
+            left: 1rem;
             background-color: #e0c8a9;
-            padding: 5px 10px;
-            border-radius: 5px;
-            font-size: 0.8em;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.8rem; /* Relative font size */
             color: #5e503f;
             z-index: 100;
         }
@@ -51,15 +58,15 @@
         .modal-content {
             background-color: #fefefe;
             margin: auto; /* Center horizontally and vertically */
-            padding: 30px;
+            padding: 1.5rem; /* Responsive padding using rem */
             border: 1px solid #888;
-            width: 80%; /* Responsive width */
+            width: 90%; /* More responsive width for smaller screens */
             max-width: 400px; /* Max width for larger screens */
-            border-radius: 8px;
+            border-radius: 0.5rem;
             text-align: center;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.3); /* Responsive shadow using rem */
             color: #5e503f; /* Earthy text color */
-            font-size: 1.2em;
+            font-size: 1.1rem; /* Relative font size */
             box-sizing: border-box;
         }
 
@@ -67,12 +74,13 @@
             margin-top: 0;
             color: #333;
             font-weight: 700;
+            font-size: 1.4rem; /* Relative font size */
         }
 
         .close-button {
             color: #aaa;
             float: right;
-            font-size: 28px;
+            font-size: 2rem; /* Relative font size */
             font-weight: bold;
             cursor: pointer;
         }
@@ -84,30 +92,31 @@
             cursor: pointer;
         }
 
-        /* Generalized container styling for responsiveness */
+        /* Generalized container styling for responsiveness across all major sections */
         .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
             background-color: #a08e79; /* Medium earthy tone */
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px; /* Base padding for smaller screens */
-            margin: 0 auto 20px auto; /* Center horizontally and space below */
+            border-radius: 0.5rem;
+            box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2); /* Responsive shadow using rem */
+            padding: 1.25rem; /* Base padding using rem for smaller screens */
+            margin: 0 auto 1.25rem auto; /* Center horizontally and add space below using rem */
             width: 95%; /* Use a percentage for responsiveness */
-            max-width: 560px; /* Max width for larger screens (approx. board width + padding) */
+            max-width: 600px; /* Adjusted max-width for better tablet/desktop fit */
             text-align: center;
             color: #5e503f;
             box-sizing: border-box;
         }
-        /* Adjust padding for larger screens */
-        @media (min-width: 600px) {
+
+        /* Adjust padding for larger screens (tablets and desktops) */
+        @media (min-width: 768px) {
             .selection-container, .difficulty-container, .lobby-container, .container, .rules-container {
-                padding: 30px;
+                padding: 1.5rem; /* Increase padding for larger screens */
             }
         }
 
-
         .selection-container h2, .lobby-container h2, .lobby-container h3, .difficulty-container h3, .rules-container h3 {
             color: #5e503f; /* Earthy text color */
-            margin-bottom: 15px;
+            margin-bottom: 1rem;
+            font-size: 1.6rem; /* Relative font size */
         }
 
         .selection-container button, .difficulty-container button, .info button,
@@ -116,23 +125,32 @@
             background-color: #c6b8a9; /* Lighter earthy tone */
             color: #5e503f; /* Earthy text color */
             border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
+            padding: 0.75rem 1.5rem; /* Use rem for padding */
+            border-radius: 0.375rem; /* Use rem for border-radius */
             cursor: pointer;
-            font-size: 16px;
+            font-size: 1rem; /* Relative font size */
             transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-            margin: 5px;
+            margin: 0.3125rem; /* Use rem for margin */
             outline: none; /* Remove outline on focus */
         }
 
         .selection-container button:hover, .difficulty-container button:hover, .info button:hover,
         .lobby-controls button:hover, .rules-toggle:hover {
             background-color: #b0a194; /* Slightly darker hover */
-            transform: translateY(-2px); /* Subtle lift on hover */
+            transform: translateY(-0.125rem); /* Subtle lift on hover using rem */
         }
         .selection-container button:active, .difficulty-container button:active, .info button:active,
         .lobby-controls button:active, .rules-toggle:active {
             transform: translateY(0); /* Press down on click */
+        }
+
+        .lobby-controls {
+            display: flex;
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            justify-content: center;
+            align-items: center;
+            gap: 0.625rem; /* Use rem for gap between items */
+            margin-bottom: 1rem;
         }
 
         .lobby-controls button:disabled {
@@ -141,38 +159,37 @@
         }
 
         .lobby-controls input[type="text"] {
-            padding: 10px;
-            border-radius: 5px;
+            padding: 0.625rem;
+            border-radius: 0.3125rem;
             border: 1px solid #776e65;
-            margin-right: 10px;
+            flex-grow: 1; /* Allow input to grow within the flex container */
+            max-width: 200px; /* Limit max width of the input field */
             font-family: 'Google Sans', sans-serif;
-            font-size: 16px;
+            font-size: 1rem;
             background-color: #f9f9f9;
             color: #333;
-            width: calc(100% - 100px); /* Make input responsive */
-            max-width: 200px; /* Limit max width */
             box-sizing: border-box;
         }
 
         .available-games-list {
-            margin-top: 20px;
-            max-height: 150px;
+            margin-top: 1.25rem;
+            max-height: 9.375rem; /* Fixed height in rem for consistency (e.g., 150px) */
             overflow-y: auto;
             border: 1px solid #776e65;
-            border-radius: 5px;
+            border-radius: 0.3125rem;
             background-color: #e0c8a9;
-            padding: 10px;
+            padding: 0.625rem;
         }
         .available-games-list button {
             display: block;
-            width: calc(100% - 10px);
-            margin: 5px auto;
+            width: calc(100% - 0.625rem); /* Adjust width for padding */
+            margin: 0.3125rem auto;
             text-align: center;
-            padding: 8px;
+            padding: 0.5rem;
             background-color: #c6b8a9;
             color: #5e503f;
             border: none;
-            border-radius: 4px;
+            border-radius: 0.25rem;
             cursor: pointer;
             transition: background-color 0.2s ease-in-out;
         }
@@ -181,37 +198,41 @@
         }
 
         .current-game-info {
-            margin-top: 20px;
+            margin-top: 1.25rem;
             color: #5e503f;
-            font-size: 1.1em;
+            font-size: 1.1rem;
+            display: flex; /* Use flexbox for horizontal alignment of items */
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            justify-content: center;
+            align-items: center;
+            gap: 0.625rem; /* Gap between items */
+        }
+        .current-game-info p {
+            margin: 0; /* Remove default paragraph margins for better flex control */
         }
 
         /* Board specific responsiveness */
         .board {
             display: grid;
-            /* Each cell will take 1 fraction of the available space */
             grid-template-columns: repeat(8, 1fr);
             grid-template-rows: repeat(8, 1fr);
-            gap: clamp(2px, 1vw, 4px); /* Responsive gap */
+            gap: clamp(2px, 1vw, 4px); /* Responsive gap using clamp for fluid scaling */
             background-color: #776e65;
-            border-radius: 4px;
-            /* Set a maximum width for the board to prevent it from becoming too large */
-            max-width: 520px; /* Approximately 8 * 60px + 7 * 4px */
-            width: 95vw; /* Board will take 95% of viewport width initially */
-            /* Ensure the board scales down on smaller screens */
+            border-radius: 0.25rem;
+            max-width: 560px; /* Adjusted max-width for board to fit tablets/desktops well */
+            width: 95vw; /* Board will take 95% of viewport width initially, ensuring mobile fit */
             height: auto; /* Allow height to adjust with content */
             aspect-ratio: 1 / 1; /* Keep the board square */
             margin: 0 auto; /* Center the board */
-            padding: 5px; /* Added padding to the board itself to prevent edge cutting */
+            padding: 0.3125rem; /* Added padding to the board itself to prevent edge cutting */
             box-sizing: border-box;
         }
 
         .cell {
-            /* Flex-grow and flex-shrink properties are handled by grid-template-columns/rows */
             width: auto; /* Auto width from grid system */
             height: auto; /* Auto height from grid system */
             background-color: #c6b8a9;
-            border-radius: 4px;
+            border-radius: 0.25rem;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -224,11 +245,10 @@
         }
 
         .piece {
-            /* Piece size relative to cell size */
             width: 80%; /* 80% of the cell's width/height */
             height: 80%; /* 80% of the cell's width/height */
             border-radius: 50%;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3); /* Responsive shadow using rem */
             transition: transform 0.2s ease-in-out;
         }
 
@@ -263,7 +283,7 @@
             font-family: "Font Awesome 6 Free"; /* Specify Font Awesome font */
             font-weight: 900; /* Solid icon weight */
             content: "\f447"; /* Unicode for fa-chess-rook icon */
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); /* Add shadow to the icon itself */
+            text-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3); /* Add shadow to the icon itself */
         }
 
         .cell.possible-move {
@@ -273,8 +293,8 @@
         .cell.possible-move::before {
             content: '';
             display: block;
-            width: clamp(8px, 2.5vw, 16px); /* Responsive indicator size */
-            height: clamp(8px, 2.5vw, 16px); /* Responsive indicator size */
+            width: clamp(8px, 2.5vw, 16px); /* Responsive indicator size using clamp */
+            height: clamp(8px, 2.5vw, 16px); /* Responsive indicator size using clamp */
             border-radius: 50%;
             background-color: rgba(51, 51, 51, 0.6); /* Indicate possible black move */
             transition: background-color 0.2s ease-in-out;
@@ -286,32 +306,36 @@
         }
 
         .info {
-            margin-top: 20px;
+            margin-top: 1.25rem;
             text-align: center;
             color: #5e503f; /* Earthy text color */
             width: 100%; /* Ensure info section is responsive */
             box-sizing: border-box;
+            display: flex; /* Use flexbox for horizontal alignment of items */
+            flex-wrap: wrap; /* Allow items to wrap on smaller screens */
+            justify-content: center;
+            align-items: center;
+            gap: 0.625rem; /* Gap between info elements */
         }
 
         .info p {
-            margin: 5px 0;
+            margin: 0.3125rem 0; /* Use rem for margin */
         }
 
         .rules-container {
             /* Styling from common container applies */
-            /* Adjust content specific styles here */
-            font-size: 0.95em; /* Slightly reduce font size for better mobile fit */
+            font-size: 0.95rem; /* Slightly reduce font size for better mobile fit */
         }
 
         .rules-container h3 {
             color: #5e503f;
-            margin-bottom: 10px;
+            margin-bottom: 0.625rem;
         }
 
         .rules-toggle {
             width: auto;
-            padding: 10px 20px;
-            margin-bottom: 15px; /* Space between button and content */
+            padding: 0.625rem 1.25rem;
+            margin-bottom: 0.9375rem; /* Space between button and content */
         }
 
         .rules-content {
@@ -320,30 +344,28 @@
             transition: max-height 0.5s ease-in-out, opacity 0.3s ease-in-out;
             opacity: 0;
             text-align: left; /* Align content within */
-            padding: 0 15px; /* Add more padding to ensure text isn't cut off at edges */
+            padding: 0 0.9375rem; /* Add more padding to ensure text isn't cut off at edges */
             box-sizing: border-box; /* Include padding in the max-height */
         }
 
         .rules-content.expanded {
-            max-height: 500px; /* Arbitrary large value to allow content to expand and scroll */
+            max-height: 31.25rem; /* Arbitrary large value to allow content to expand and scroll (500px converted to rem) */
             opacity: 1;
-            padding-bottom: 15px; /* Add padding when expanded */
+            padding-bottom: 0.9375rem; /* Add padding when expanded */
         }
 
         .rules-content ul, .rules-content ol {
             list-style: decimal; /* Use numbered list for rules */
-            padding-left: 20px; /* Indent list items */
+            padding-left: 1.25rem; /* Indent list items */
             text-align: left;
             margin: 0; /* Remove default ul/ol margins */
-            /* Text within li should naturally wrap due to parent width and word-wrap */
         }
         .rules-content ul {
             list-style: disc; /* Use bullet points for tips */
         }
 
-
         .rules-content li {
-            margin-bottom: 8px;
+            margin-bottom: 0.5rem;
             line-height: 1.4;
             word-wrap: break-word; /* Ensure long words break to fit */
         }
@@ -409,8 +431,10 @@
         <div class="info">
             <p id="turn">Black's Turn</p>
             <p id="score">Black: 2, White: 2</p>
-            <p>Game ID: <span id="game-display-id-in-game"></span></p> <button onclick="window.resetGame()">Reset Game</button>
-            <button onclick="window.leaveGameFromInGame()">Back to Lobby</button> </div>
+            <p>Game ID: <span id="game-display-id-in-game"></span></p>
+            <button onclick="window.resetGame()">Reset Game</button>
+            <button onclick="window.leaveGameFromInGame()">Back to Lobby</button>
+        </div>
     </div>
 
     <div class="rules-container">
