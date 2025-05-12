@@ -95,7 +95,7 @@
             max-width: 560px; /* Max width for larger screens (approx. board width + padding) */
             text-align: center;
             color: #5e503f;
-            box-sizing: border-box; /* Include padding in the element's total width */
+            box-sizing: border-box;
         }
         /* Adjust padding for larger screens */
         @media (min-width: 600px) {
@@ -189,30 +189,34 @@
         /* Board specific responsiveness */
         .board {
             display: grid;
-            /* Using clamp for cell size: min 30px, preferred 10vw, max 60px */
-            grid-template-columns: repeat(8, clamp(30px, 10vw, 60px));
-            grid-template-rows: repeat(8, clamp(30px, 10vw, 60px));
-            /* Using clamp for gap size: min 2px, preferred 1vw, max 4px */
-            gap: clamp(2px, 1vw, 4px);
+            /* Each cell will take 1 fraction of the available space */
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            gap: clamp(2px, 1vw, 4px); /* Responsive gap */
             background-color: #776e65;
             border-radius: 4px;
-            /* Max-width to prevent board from becoming too large on wide screens */
-            max-width: calc(8 * 60px + 7 * 4px); /* Max size based on max cell and gap size */
+            /* Set a maximum width for the board to prevent it from becoming too large */
+            max-width: 520px; /* Approximately 8 * 60px + 7 * 4px */
+            width: 95vw; /* Board will take 95% of viewport width initially */
+            /* Ensure the board scales down on smaller screens */
+            height: auto; /* Allow height to adjust with content */
+            aspect-ratio: 1 / 1; /* Keep the board square */
             margin: 0 auto; /* Center the board */
             padding: 5px; /* Added padding to the board itself to prevent edge cutting */
             box-sizing: border-box;
         }
 
         .cell {
-            /* Inherit sizing from grid-template-columns/rows */
-            width: auto;
-            height: auto;
+            /* Flex-grow and flex-shrink properties are handled by grid-template-columns/rows */
+            width: auto; /* Auto width from grid system */
+            height: auto; /* Auto height from grid system */
             background-color: #c6b8a9;
             border-radius: 4px;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
+            aspect-ratio: 1 / 1; /* Ensure each cell is square */
         }
 
         .cell:hover {
@@ -246,8 +250,8 @@
             display: flex; /* Use flex to center the icon */
             justify-content: center;
             align-items: center;
-            /* Font size relative to the piece/cell size */
-            font-size: clamp(1.5em, 4vw, 2.2em); /* Responsive font size for the icon */
+            /* Font size relative to the piece/cell size using fluid typography with clamp */
+            font-size: clamp(1.5rem, 4vw, 2.2rem); /* Responsive font size for the icon */
             color: #333; /* Default color for black castles */
         }
 
