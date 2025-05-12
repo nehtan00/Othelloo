@@ -219,13 +219,21 @@
             gap: clamp(2px, 1vw, 4px); /* Responsive gap using clamp for fluid scaling */
             background-color: #776e65;
             border-radius: 0.25rem;
-            max-width: 560px; /* Adjusted max-width for board to fit tablets/desktops well */
-            width: 95vw; /* Board will take 95% of viewport width initially, ensuring mobile fit */
+            max-width: 560px; /* Maximum width for larger screens */
+            width: calc(100% - 2rem); /* Ensure the board fits within the container with padding */
             height: auto; /* Allow height to adjust with content */
-            aspect-ratio: 1 / 1; /* Keep the board square */
+            aspect-ratio: 1 / 1; /* Maintain square aspect ratio */
             margin: 0 auto; /* Center the board */
-            padding: 0.3125rem; /* Added padding to the board itself to prevent edge cutting */
-            box-sizing: border-box;
+            padding: 0; /* Remove padding to prevent overflow */
+            box-sizing: border-box; /* Ensure padding and border are included in width and height */
+        }
+        
+        /* Media query for smaller screens */
+        @media (max-width: 480px) {
+            .board {
+                width: 90vw; /* Slightly reduced width for better fit on very narrow screens */
+                gap: 1px; /* Reduce the gap between cells for smaller devices */
+            }
         }
 
         .cell {
